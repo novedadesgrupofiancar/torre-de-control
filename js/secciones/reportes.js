@@ -22,16 +22,58 @@ Modulos.Reportes = (() => {
         <div class="pildoras" id="rrhh-totales"></div>
         <pre class="vista-previa" id="rrhh-texto">Cargando…</pre>
       </section>
-      <div class="fila-2">
-        <section class="tarjeta proximamente">
+      <section class="tarjeta">
+        <div>
           <h2>Campañas semanal</h2>
-          <span class="pildora pildora-azul">Próximamente</span>
-        </section>
-        <section class="tarjeta proximamente">
-          <h2>Resumen para Jimena</h2>
-          <span class="pildora pildora-azul">Próximamente</span>
-        </section>
-      </div>`;
+          <p class="nota">Gestionadas, ganadas, No aplica por motivo y el resto de los estados, contra la foto del viernes anterior.</p>
+        </div>
+        <div class="acciones" style="justify-content:flex-start">
+          <div style="min-width:170px">${campo('Mes', `<select id="camp-mes">${opcionesHtml(Estado.config.campanias.map(c => c.mes), Modulos.Campanias.mesPorDefecto(), Estado.config.campanias.length ? undefined : 'Sin links cargados')}</select>`)}</div>
+          <div class="crece"></div>
+          <button type="button" class="btn btn-sec" id="camp-generar" ${Estado.config.campanias.length ? '' : 'disabled'}>Generar</button>
+          <button type="button" class="btn btn-primario" id="camp-excel" disabled>Exportar a Excel</button>
+        </div>
+        <div id="camp-resultado"></div>
+      </section>
+      <section class="tarjeta proximamente">
+        <h2>Resumen para Jimena</h2>
+        <span class="pildora pildora-azul">Próximamente</span>
+      </section>`;
+
+    let reporteCampanias = null;
+    v.querySelector('#camp-generar').addEventListener('click', async e => {
+      const salida = vista.querySelector('#camp-resultado');
+      const excel = vista.querySelector('#camp-excel');
+      excel.disabled = true;
+      salida.innerHTML = '<div class="cargando">Leyendo las planillas del mes…</div>';
+      const ok = await conBoton(e.currentTarget, async () => {
+        reporteCampanias = await Modulos.Campanias.reporteSemanal(vista.querySelector('#camp-mes').value);
+      }, 'Generando…');
+      if (!ok) { salida.innerHTML = ''; return; }
+      const r = reporteCampanias;
+      salida.innerHTML = `
+        <p class="nota mono">Del ${fmtFechaHora(r.desde)} al ${fmtFechaHora(r.hasta)} · ${esc(r.referencia)}</p>
+        <div class="tabla-envoltura"><table class="tabla">
+          <thead><tr><th>Concepto</th><th class="num">Cantidad</th></tr></thead>
+          <tbody>${r.filas.map(([n, c]) => `<tr><td>${esc(n)}</td><td class="num">${c}</td></tr>`).join('')}</tbody>
+        </table></div>`;
+      excel.disabled = false;
+    });
+    v.querySelector('#camp-excel').addEventListener('click', () => {
+      const r = reporteCampanias;
+      Xlsx.descargar(`Campañas semanal ${r.mes} al ${r.hasta.slice(0, 10)}.xlsx`, [{
+        nombre: 'Campañas semanal',
+        filas: [
+          ['Reporte semanal de campañas', r.mes],
+          ['Desde', fmtFechaHora(r.desde)],
+          ['Hasta', fmtFechaHora(r.hasta)],
+          ['Referencia', r.referencia],
+          [],
+          ['Concepto', 'Cantidad'],
+          ...r.filas
+        ]
+      }]);
+    });
 
     v.querySelector('#rrhh-fecha').addEventListener('change', cargar);
     v.querySelector('#rrhh-copiar').addEventListener('click', async () => {

@@ -12,6 +12,8 @@ clave*.txt
 
 # Datos de prueba y ejemplos
 ejemplos/
+Reportes 3CX/
+Clave.txt
 *.csv
 *.xlsx
 *.xls

@@ -21,6 +21,10 @@ const ACCIONES = {
   obtenerConfiguracion: () => obtenerConfiguracion(),
   guardarConfiguracion: d => guardarConfiguracion(d.bloque, d.valor),
 
+  // Sección 2
+  leerCampania: d => leerCampania(d.mes),
+  guardarCruce3CX: d => guardarCruce3CX(d),
+
   // Sección 3 y reporte RRHH
   listarAsistencia: () => listarAsistencia(),
   registrarAsistencia: d => registrarAsistencia(d),

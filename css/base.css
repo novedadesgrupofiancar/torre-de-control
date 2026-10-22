@@ -336,6 +336,10 @@ input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; accent-color:
 .proximamente { align-items: flex-start; }
 .cargando { color: var(--apagado); padding: 20px 4px; font-family: var(--mono); font-size: 13px; }
 
+/* ----- Bloques dentro de una misma tarjeta ----- */
+.bloque-interno { display: flex; flex-direction: column; gap: 16px; }
+.bloque-interno.separado { border-top: 1px solid var(--pista); padding-top: 20px; }
+
 /* ----- Pantalla de ingreso ----- */
 .ingreso { min-height: 100vh; display: grid; place-items: center; padding: 20px; }
 .ingreso[hidden], .app[hidden] { display: none; }

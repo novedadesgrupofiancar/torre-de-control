@@ -6,7 +6,7 @@ const Estado = { config: null, seccion: null, alSalir: null };
 // Menú: las 8 secciones + Reportes + Configuración. Sin "modulo" se muestra "Próximamente".
 const SECCIONES = [
   { id: 'llamadas', chip: '1', nombre: 'Llamadas y conexión' },
-  { id: 'campanias', chip: '2', nombre: 'Campañas' },
+  { id: 'campanias', chip: '2', nombre: 'Campañas', modulo: 'Campanias' },
   { id: 'asistencia', chip: '3', nombre: 'Marcas y asistencia', titulo: 'Marcas / llegadas tarde / home office / faltas', modulo: 'Asistencia' },
   { id: 'issues', chip: '4', nombre: 'Issues', modulo: 'Issues' },
   { id: 'redes', chip: '5', nombre: 'Redes', modulo: 'Redes' },

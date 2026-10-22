@@ -23,8 +23,10 @@ Modulos.Configuracion = (() => {
       <section class="tarjeta" id="b-agentes"></section>
       <section class="tarjeta" id="b-horarios"></section>
       <section class="tarjeta" id="b-campanias"></section>
-      <section class="tarjeta" id="b-listas"></section>
-      <section class="tarjeta" id="b-palabras"></section>
+      <section class="tarjeta">
+        <div class="bloque-interno" id="b-listas"></div>
+        <div class="bloque-interno separado" id="b-palabras"></div>
+      </section>
       <section class="tarjeta" id="b-destinatarios"></section>`;
     pintarTodo();
   }
@@ -36,7 +38,7 @@ Modulos.Configuracion = (() => {
     pintarHorarios();
     pintarCampanias();
     pintarListas('b-listas', 'listas', 'Listas editables', 'Lo que se quita de una lista no se borra de los registros ya guardados.', LISTAS);
-    pintarListas('b-palabras', 'palabras_clave', 'Palabras clave de No aplica', 'Se usan en Campañas para clasificar los "No aplica" por el comentario del agente (sin distinguir mayúsculas ni acentos).', PALABRAS);
+    pintarListas('b-palabras', 'palabras_clave', 'Palabras clave de No aplica', 'Se usan en Campañas para clasificar los "No aplica" por el comentario del agente, en este orden (gana la primera que coincide), sin distinguir mayúsculas ni acentos. Un comentario con formato de orden de taller (dd/mm/aaaa | número | NN K) cuenta como "ya vino".', PALABRAS);
     pintarDestinatarios();
   }
 
@@ -67,7 +69,7 @@ Modulos.Configuracion = (() => {
         <p class="nota">Nombre como figura en las planillas e interno de 3CX. Para una baja, desmarcá "Activo": el historial se conserva.</p>
       </div>
       <div class="tabla-envoltura"><table class="tabla">
-        <thead><tr><th>Nombre</th><th>Interno 3CX</th><th>Estado</th><th></th></tr></thead>
+        <thead><tr><th>Nombre en planillas</th><th>Interno 3CX</th><th>Estado</th><th></th></tr></thead>
         <tbody>${Estado.config.agentes.map(a => filaAgente(a, false)).join('')}</tbody>
       </table></div>
       <div class="acciones">
