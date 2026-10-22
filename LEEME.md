@@ -14,7 +14,8 @@ La especificación funcional (`Arquitectura.md`) queda solo en la carpeta local:
 - La clave se guarda en **Propiedades del script** (`CLAVE_ACCESO`), nunca en el código.
 - La primera vez, el panel pide la clave y la guarda en el navegador (localStorage). Si la clave cambia o es inválida, vuelve a la pantalla de ingreso.
 - **Cambiar la clave:** en el proyecto de Apps Script → Configuración del proyecto (engranaje) → Propiedades del script → editar `CLAVE_ACCESO` (mínimo 24 caracteres). Después se ingresa la clave nueva en el panel.
-- No van al repositorio: credenciales de clasp (`.clasprc.json`, `.clasp.json`), CSV/Excel de prueba, la carpeta `ejemplos/` ni `Arquitectura.md` (ver `.gitignore`).
+- No van al repositorio: credenciales de clasp (`.clasprc.json`, `.clasp.json`), CSV/Excel de prueba, las carpetas `ejemplos/` y `Reportes 3CX/`, `Clave.txt` ni `Arquitectura.md` (ver `.gitignore`).
+- Los links de las planillas de campaña se cargan solo en Configuración (quedan en la base, no en el código).
 
 ## Estructura
 
@@ -27,13 +28,15 @@ torre-de-control/
 ├── js/
 │   ├── config.js              URL de la API (web app de Apps Script)
 │   ├── nucleo.js              ingreso con clave, llamadas a la API, menú, utilidades
-│   └── secciones/             una vista por sección: asistencia, issues, redes, taller,
-│                              whatsapp, recordatorios, reportes, configuracion
+│   ├── xlsx.js                genera archivos .xlsx en el navegador (sin librerías)
+│   └── secciones/             una vista por sección: campanias (+ campanias-logica), asistencia,
+│                              issues, redes, taller, whatsapp, recordatorios, reportes, configuracion
 └── backend/                   Google Apps Script (se sube con clasp)
     ├── appsscript.json        manifiesto: zona horaria, permisos, web app
     ├── Api.gs                 doPost/doGet, control de la clave, lista de acciones
     ├── Base.gs                planilla base, hojas, lectura/escritura, Excel, fechas
     ├── Configuracion.gs       agentes, horarios, campañas, listas, palabras clave, destinatarios
+    ├── Campanias.gs           Sección 2: lectura de planillas, foto semanal, guardado del cruce 3CX
     ├── Asistencia.gs          Sección 3 y reporte semanal para RRHH
     ├── Issues.gs              Sección 4
     ├── Redes.gs               Sección 5
@@ -68,10 +71,25 @@ Las acciones disponibles están en `ACCIONES`, al principio de `backend/Api.gs`.
 | capturas | Link y archivo de Drive de cada captura |
 | whatsapp | Controles de WhatsApp |
 | check_diario | Un registro por día marcado |
+| fotos_campañas | Foto semanal de las planillas de campaña (viernes 17:30): una fila por cliente con agente, km y Oportunidad |
+| cruces_3cx | Resultado de cada cruce con 3CX: una fila por gestión (Atendida / No atendida / Sin llamada), con el período |
 | configuración | Cada vez que se guarda un bloque de Configuración se agrega una fila; vale la última de cada clave |
 
 Todo registro guarda fecha y hora automática (`registrado_en`) y se agrega al final: no se sobrescribe nada.
 No conviene editar ni reordenar columnas a mano en la planilla.
+
+## Sección 2 – Campañas
+
+- **Planillas:** los links del mes se cargan en Configuración › Links de campañas. Son .xlsx en Drive: el backend los convierte a una copia temporal (servicio avanzado de Drive, v3) y la borra al terminar. Las columnas se ubican por encabezado.
+  - Chevrolet: una hoja por km (se ignora "Resumen"), encabezado en la fila 1, km = nombre de la hoja.
+  - Marcas: una hoja por marca, encabezado en la fila 3, km = "Próximo service" o "Service a ofrecer".
+  - Comentario del agente: la columna sin título después de "Taller".
+- **Agentes:** se cruzan por "Nombre en planillas" (sin acentos ni mayúsculas). Los que no están en Configuración aparecen como "Sin mapear".
+- **No aplica:** se clasifica por las palabras clave de Configuración › Listas editables, en orden Canepas → vendió → ya vino/km; gana la primera. Un comentario con formato de orden de taller (dd/mm/aaaa | número | NN K) cuenta como "ya vino".
+- **Semana:** son las filas cuya Oportunidad cambió desde la última foto del mes tomada antes de hoy (cualquier cambio, clasificado por el estado actual). Si todavía no hay foto en el mes, se toma desde el inicio del mes.
+- **Cruce con 3CX:** el CSV de salientes se lee en el navegador. Se cruzan las gestiones de la semana con las llamadas del mismo agente (por interno) a sus teléfonos (últimos 8 dígitos), dentro del período. Atendida si algún tramo fue "Answered". El resultado se guarda en `cruces_3cx`.
+- **Foto semanal:** función `tomarFotoCampanias`, con un activador de tiempo los viernes a las 17:30 (hora de Montevideo). El activador se crea ejecutando una vez `instalarActivadorFoto` desde el editor de Apps Script.
+- **Reporte semanal:** en Reportes › Campañas semanal; el .xlsx se arma en el navegador.
 
 ## Reglas definidas
 
@@ -99,5 +117,4 @@ Si se agrega una hoja nueva a `HOJAS` en `backend/Base.gs`, subir `VERSION_BASE`
 ## Pendiente (próximas etapas)
 
 - Sección 1 – Llamadas y conexión (reportes 3CX).
-- Sección 2 – Campañas (planillas .xlsx del mes y cruce con 3CX).
-- Reporte semanal de campañas y resumen para Jimena.
+- Resumen para Jimena.
