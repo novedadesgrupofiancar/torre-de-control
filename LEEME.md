@@ -29,14 +29,17 @@ torre-de-control/
 │   ├── config.js              URL de la API (web app de Apps Script)
 │   ├── nucleo.js              ingreso con clave, llamadas a la API, menú, utilidades
 │   ├── xlsx.js                genera archivos .xlsx en el navegador (sin librerías)
-│   └── secciones/             una vista por sección: campanias (+ campanias-logica), asistencia,
-│                              issues, redes, taller, whatsapp, recordatorios, reportes, configuracion
+│   └── secciones/             una vista por sección: llamadas (+ llamadas-logica), campanias
+│                              (+ campanias-logica), asistencia, issues, redes, taller, whatsapp,
+│                              recordatorios, reportes (+ jimena-logica), configuracion
 └── backend/                   Google Apps Script (se sube con clasp)
     ├── appsscript.json        manifiesto: zona horaria, permisos, web app
     ├── Api.gs                 doPost/doGet, control de la clave, lista de acciones
     ├── Base.gs                planilla base, hojas, lectura/escritura, Excel, fechas
     ├── Configuracion.gs       agentes, horarios, campañas, listas, palabras clave, destinatarios
+    ├── Llamadas.gs            Sección 1: guardado e historial de las cargas de 3CX
     ├── Campanias.gs           Sección 2: lectura de planillas, foto semanal, guardado del cruce 3CX
+    ├── Jimena.gs              datos de la semana para el resumen para Jimena
     ├── Asistencia.gs          Sección 3 y reporte semanal para RRHH
     ├── Issues.gs              Sección 4
     ├── Redes.gs               Sección 5
@@ -71,12 +74,27 @@ Las acciones disponibles están en `ACCIONES`, al principio de `backend/Api.gs`.
 | capturas | Link y archivo de Drive de cada captura |
 | whatsapp | Controles de WhatsApp |
 | check_diario | Un registro por día marcado |
+| llamadas | Resultado de cada carga de 3CX: una fila por agente y una "Equipo" (% atendidas, detalle por cola, desconexiones, sesiones sin cerrar, resumen), con período y semana |
 | fotos_campañas | Foto semanal de las planillas de campaña (viernes 17:30): una fila por cliente con agente, km y Oportunidad |
 | cruces_3cx | Resultado de cada cruce con 3CX: una fila por gestión (Atendida / No atendida / Sin llamada), con el período |
 | configuración | Cada vez que se guarda un bloque de Configuración se agrega una fila; vale la última de cada clave |
 
 Todo registro guarda fecha y hora automática (`registrado_en`) y se agrega al final: no se sobrescribe nada.
 No conviene editar ni reordenar columnas a mano en la planilla.
+
+## Sección 1 – Llamadas y conexión
+
+- Se cargan los 2 CSV de 3CX (% de llamadas atendidas e historial de conexión), de un día, una semana o un mes. Se procesan en el navegador y se guarda el resultado en la hoja `llamadas`.
+- El agente se identifica por el interno ("1234 Nombre Apellido" → 1234) según Configuración; los internos que no están cargados se ignoran. Se ignora la fila "Totals".
+- **% de atendidas:** por cola, ofrecidas = atendidas / %; el total del agente es la suma de atendidas sobre la suma de ofrecidas.
+- **Desconexiones:** solo lunes a viernes y solo cortes entre sesiones del mismo día. Del corte se descuenta lo que cae dentro de los descansos configurados; cuenta si lo que queda supera la tolerancia del agente (Configuración › Horarios; vacío = 5 min).
+- **Sesiones sin cerrar:** sesiones que arrancan a las 00:00, terminan a las 24:00 o están en fin de semana. "Noches" = sesiones que terminan a las 24:00.
+
+## Resumen para Jimena
+
+- Reportes › Resumen para Jimena: semana de lunes a viernes que incluye la fecha elegida. Botón para copiar el texto.
+- Llamadas: la última carga de 3CX cuyo período toca la semana. Campañas: reporte semanal contra la última foto. Asistencia, issues (solo comentarios del período), redes y taller de la semana. No incluye WhatsApp.
+- Texto armado con reglas fijas (`js/secciones/jimena-logica.js`); los comentarios van textuales.
 
 ## Sección 2 – Campañas
 
@@ -114,7 +132,7 @@ Desde la carpeta de trabajo, con `git`, `gh` y `clasp` ya autenticados en la cue
 
 Si se agrega una hoja nueva a `HOJAS` en `backend/Base.gs`, subir `VERSION_BASE` para que se cree en la próxima llamada.
 
-## Pendiente (próximas etapas)
+## Pendiente
 
-- Sección 1 – Llamadas y conexión (reportes 3CX).
-- Resumen para Jimena.
+- Ajustar las palabras clave de No aplica con la lista de "sin clasificar" de la Sección 2.
+

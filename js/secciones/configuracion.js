@@ -113,16 +113,17 @@ Modulos.Configuracion = (() => {
     b.innerHTML = `
       <div>
         <h2>Horarios y descansos</h2>
-        <p class="nota">Entrada, salida y descansos de cada agente activo.</p>
+        <p class="nota">Entrada, salida y descansos de cada agente activo. Tolerancia: minutos desde los que un corte entre sesiones cuenta como desconexión (vacío = ${LlamadasLogica.TOLERANCIA_POR_DEFECTO} min).</p>
       </div>
       ${activos.length ? `<div class="tabla-envoltura"><table class="tabla">
-        <thead><tr><th>Agente</th><th>Entrada</th><th>Salida</th><th>Descansos</th></tr></thead>
+        <thead><tr><th>Agente</th><th>Entrada</th><th>Salida</th><th>Tolerancia (min)</th><th>Descansos</th></tr></thead>
         <tbody>${activos.map(a => {
-          const h = Estado.config.horarios[a.id] || { entrada: '', salida: '', descansos: [] };
+          const h = Object.assign({ entrada: '', salida: '', tolerancia: '', descansos: [] }, Estado.config.horarios[a.id]);
           return `<tr data-id="${esc(a.id)}">
             <td><strong>${esc(a.nombre)}</strong></td>
             <td><input type="time" name="entrada" value="${esc(h.entrada)}" aria-label="Entrada de ${esc(a.nombre)}" style="max-width:140px"></td>
             <td><input type="time" name="salida" value="${esc(h.salida)}" aria-label="Salida de ${esc(a.nombre)}" style="max-width:140px"></td>
+            <td><input type="number" name="tolerancia" min="0" max="240" step="1" value="${esc(h.tolerancia)}" placeholder="${LlamadasLogica.TOLERANCIA_POR_DEFECTO}" aria-label="Tolerancia de ${esc(a.nombre)} en minutos" style="max-width:110px"></td>
             <td><div class="lista descansos">${h.descansos.map(filaDescanso).join('')}</div>
               <button type="button" class="btn btn-sec btn-chico" data-agregar-descanso style="margin-top:8px">Agregar descanso</button></td>
           </tr>`;
@@ -145,6 +146,7 @@ Modulos.Configuracion = (() => {
         horarios[tr.dataset.id] = {
           entrada: tr.querySelector('[name=entrada]').value,
           salida: tr.querySelector('[name=salida]').value,
+          tolerancia: tr.querySelector('[name=tolerancia]').value,
           descansos: [...tr.querySelectorAll('.descanso')].map(d => ({
             desde: d.querySelector('[name=d-desde]').value,
             hasta: d.querySelector('[name=d-hasta]').value

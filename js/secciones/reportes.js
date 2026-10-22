@@ -35,10 +35,53 @@ Modulos.Reportes = (() => {
         </div>
         <div id="camp-resultado"></div>
       </section>
-      <section class="tarjeta proximamente">
-        <h2>Resumen para Jimena</h2>
-        <span class="pildora pildora-azul">Próximamente</span>
+      <section class="tarjeta">
+        <div>
+          <h2>Resumen para Jimena</h2>
+          <p class="nota">Semana de lunes a viernes: llamadas y conexión, campañas, asistencia, issues, redes y taller. Sin WhatsApp.</p>
+        </div>
+        <div class="acciones" style="justify-content:flex-start">
+          <div style="min-width:200px">${campo('Semana que incluye el día', `<input type="date" id="jim-fecha" value="${hoyISO()}">`)}</div>
+          <div class="crece"></div>
+          <button type="button" class="btn btn-sec" id="jim-generar">Generar</button>
+          <button type="button" class="btn btn-primario" id="jim-copiar" disabled>Copiar para mail</button>
+        </div>
+        <p class="nota" id="jim-destino"></p>
+        <pre class="vista-previa" id="jim-texto" hidden></pre>
       </section>`;
+
+    let textoJimena = '';
+    v.querySelector('#jim-generar').addEventListener('click', async e => {
+      const salida = vista.querySelector('#jim-texto');
+      const copiar = vista.querySelector('#jim-copiar');
+      copiar.disabled = true;
+      salida.hidden = false;
+      salida.textContent = 'Armando el resumen… (las campañas tardan unos segundos)';
+      const fecha = vista.querySelector('#jim-fecha').value || hoyISO();
+      const ok = await conBoton(e.currentTarget, async () => {
+        // Campañas: reporte semanal contra la última foto (si falla, el resto del resumen sale igual)
+        const mes = Modulos.Campanias.mesPorDefecto();
+        const [datos, campanias] = await Promise.all([
+          api('datosResumenJimena', { fecha }),
+          mes ? Modulos.Campanias.reporteSemanal(mes).catch(err => ({ error: 'No se pudieron leer las planillas: ' + err.message }))
+            : Promise.resolve({ error: 'No hay links de campañas cargados.' })
+        ]);
+        textoJimena = JimenaLogica.armar(datos, campanias);
+      }, 'Generando…');
+      if (!ok) { salida.hidden = true; return; }
+      salida.textContent = textoJimena;
+      const mail = Estado.config.destinatarios.jimena;
+      vista.querySelector('#jim-destino').innerHTML = mail
+        ? `Para: <span class="mono">${esc(mail)}</span>`
+        : 'Sin mail de Jimena cargado en Configuración › Destinatarios.';
+      copiar.disabled = false;
+    });
+    v.querySelector('#jim-copiar').addEventListener('click', async () => {
+      try {
+        await copiarTexto(textoJimena);
+        aviso('Resumen copiado. Pegalo en el mail.');
+      } catch (err) { aviso(err.message, 'error'); }
+    });
 
     let reporteCampanias = null;
     v.querySelector('#camp-generar').addEventListener('click', async e => {

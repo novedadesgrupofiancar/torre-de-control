@@ -8,7 +8,7 @@ const NOMBRE_PLANILLA = 'Torre de control – Base';
 const NOMBRE_CARPETA_CAPTURAS = 'Torre de control – Capturas';
 const HOJA_CONFIG = 'configuración';
 // Subir este número si se agregan hojas nuevas, para que se creen en la próxima llamada
-const VERSION_BASE = '3';
+const VERSION_BASE = '4';
 
 // Encabezados de cada hoja (el orden es el de las columnas)
 const HOJAS = {
@@ -22,6 +22,7 @@ const HOJAS = {
   'whatsapp': ['id', 'registrado_en', 'linea', 'horario', 'comentario'],
   'check_diario': ['id', 'registrado_en', 'fecha'],
   'fotos_campañas': ['id', 'registrado_en', 'foto_id', 'fecha_foto', 'mes', 'origen', 'hoja', 'km', 'agente', 'clave', 'oportunidad'],
+  'llamadas': ['id', 'registrado_en', 'carga_id', 'desde', 'hasta', 'semana', 'agente', 'interno', 'pct_atendidas', 'atendidas', 'ofrecidas', 'detalle_colas', 'desconexiones', 'minutos_desconectado', 'sesiones_sin_cerrar', 'resumen'],
   'cruces_3cx': ['id', 'registrado_en', 'cruce_id', 'mes', 'desde', 'hasta', 'agente', 'origen', 'hoja', 'km', 'cliente', 'telefono', 'oportunidad', 'resultado'],
   'configuración': ['clave', 'valor', 'registrado_en']
 };

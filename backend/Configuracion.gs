@@ -9,7 +9,7 @@ function configInicial_() {
   return {
     // {id, nombre, interno, activo}
     agentes: [],
-    // {idAgente: {entrada, salida, descansos: [{desde, hasta}]}}
+    // {idAgente: {entrada, salida, tolerancia (minutos), descansos: [{desde, hasta}]}}
     horarios: {},
     // {mes: 'aaaa-mm', link_chevrolet, link_marcas}
     campanias: [],
@@ -89,6 +89,7 @@ function normalizarHorarios_(obj) {
     limpio[id] = {
       entrada: hora(h.entrada, 'entrada'),
       salida: hora(h.salida, 'salida'),
+      tolerancia: tolerancia_(h.tolerancia),
       descansos: (h.descansos || [])
         .filter(d => texto_(d.desde) || texto_(d.hasta))
         .map(d => {
@@ -100,6 +101,15 @@ function normalizarHorarios_(obj) {
     };
   });
   return limpio;
+}
+
+/** Minutos desde los que un corte entre sesiones cuenta como desconexión (vacío = valor por defecto) */
+function tolerancia_(v) {
+  const t = texto_(v, 4);
+  if (t === '') return '';
+  const n = Number(t);
+  if (!Number.isInteger(n) || n < 0 || n > 240) throw new Error('La tolerancia debe ser un número de minutos entre 0 y 240.');
+  return n;
 }
 
 function normalizarCampanias_(lista) {

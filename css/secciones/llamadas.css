@@ -1,0 +1,25 @@
+/* Sección 1 – llamadas y conexión: tabla por agente, alertas y línea de tiempo */
+.fila-total td { background: var(--sup2); }
+.detalle-colas summary { cursor: pointer; color: var(--azul-claro); min-height: 32px; display: flex; align-items: center; }
+.detalle-colas .tabla-envoltura { margin-top: 10px; }
+.detalle-colas .de { color: var(--apagado); font-size: 11px; display: block; }
+.alerta-agente { font-size: 14px; }
+
+.leyenda { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--texto2); }
+.leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.ley { width: 14px; height: 8px; border-radius: 999px; display: inline-block; }
+.ley-conectado, .seg-conectado { background: var(--verde); }
+.ley-descanso, .seg-descanso { background: #5B6878; }
+.ley-desconexion, .seg-desconexion { background: var(--rojo-borde); }
+
+.linea-tiempo-dias { display: flex; flex-direction: column; gap: 6px; overflow-x: auto; }
+.lt-fila { display: grid; grid-template-columns: 82px minmax(320px, 1fr) 96px; gap: 10px; align-items: center; }
+.lt-dia { font-size: 12px; color: var(--texto2); }
+.lt-total { font-size: 12px; text-align: right; }
+.lt-barra { position: relative; height: 12px; border-radius: 999px; background: var(--pista); overflow: hidden; }
+.lt-barra .seg { position: absolute; top: 0; bottom: 0; }
+.lt-barra .seg-descanso { top: 3px; bottom: 3px; border-radius: 999px; }
+.lt-barra .seg-conectado { border-radius: 2px; }
+.lt-barra .seg-desconexion { border-radius: 2px; }
+.lt-escala .lt-horas { background: transparent; height: 16px; overflow: visible; }
+.lt-horas span { position: absolute; transform: translateX(-50%); font-family: var(--mono); font-size: 10px; color: var(--apagado); }
