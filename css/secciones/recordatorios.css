@@ -1,0 +1,17 @@
+/* Sección 8 – reuniones y check diario */
+.dia-reuniones { display: flex; flex-direction: column; gap: 8px; }
+.reunion { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--sup2); }
+.reunion .hora { font-family: var(--mono); color: var(--azul-claro); }
+.reunion .participantes { font-size: 12px; color: var(--apagado); overflow-wrap: anywhere; }
+.dias-check { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+.dia-check { aspect-ratio: 1; border-radius: 8px; background: var(--pista); }
+.dia-check.marcado { background: var(--verde); }
+.dia-check.hoy { background: transparent; border: 1.5px dashed var(--azul); }
+.resumen-check { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.dato { display: flex; flex-direction: column; gap: 2px; }
+.dato strong { font-family: var(--mono); font-size: 26px; font-weight: 600; }
+.dato span { font-size: 12px; color: var(--apagado); }
+
+@media (max-width: 560px) {
+  .dias-check { grid-template-columns: repeat(5, 1fr); }
+}

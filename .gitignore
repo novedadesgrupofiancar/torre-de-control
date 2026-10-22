@@ -1,0 +1,29 @@
+# Credenciales y sesiones (clasp, Google, claves)
+.clasprc.json
+.clasp.json
+.env
+.env.*
+*.pem
+*.key
+credentials*.json
+client_secret*.json
+token*.json
+clave*.txt
+
+# Datos de prueba y ejemplos
+ejemplos/
+*.csv
+*.xlsx
+*.xls
+*.wav
+*.mp4
+*.webm
+
+# Especificación interna: tiene nombres de agentes y datos del equipo
+Arquitectura.md
+
+# Sistema
+desktop.ini
+Thumbs.db
+.DS_Store
+node_modules/

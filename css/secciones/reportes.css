@@ -1,0 +1,13 @@
+/* Reportes */
+.vista-previa {
+  background: var(--sup2);
+  border-radius: 16px;
+  padding: 18px;
+  font-family: var(--mono);
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 520px;
+  overflow: auto;
+  margin: 0;
+}

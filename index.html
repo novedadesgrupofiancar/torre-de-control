@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Torre de control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/secciones/asistencia.css">
+  <link rel="stylesheet" href="css/secciones/issues.css">
+  <link rel="stylesheet" href="css/secciones/redes.css">
+  <link rel="stylesheet" href="css/secciones/taller.css">
+  <link rel="stylesheet" href="css/secciones/recordatorios.css">
+  <link rel="stylesheet" href="css/secciones/reportes.css">
+</head>
+<body>
+  <!-- Pantalla de ingreso: lo único visible sin una clave válida -->
+  <main id="ingreso" class="ingreso" hidden>
+    <section class="tarjeta ingreso-caja">
+      <div class="marca"><span class="marca-orbita" aria-hidden="true"></span><span>Torre de control</span></div>
+      <form id="f-ingreso" class="form" autocomplete="off">
+        <label class="campo"><span class="etiqueta">Clave de acceso</span>
+          <input type="password" id="clave-acceso" name="clave" required autocomplete="current-password">
+        </label>
+        <p class="ingreso-error" id="ingreso-error" role="alert"></p>
+        <button class="btn btn-primario btn-bloque" type="submit">Ingresar</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="panel" class="app" hidden>
+    <aside class="lateral">
+      <nav class="tarjeta menu" aria-label="Secciones">
+        <div class="marca"><span class="marca-orbita" aria-hidden="true"></span><span>Torre de control</span></div>
+        <div id="menu-lista" class="menu-lista"></div>
+      </nav>
+      <section class="tarjeta check-dia" id="check-dia" aria-live="polite"></section>
+    </aside>
+    <main id="contenido" class="contenido"></main>
+  </div>
+  <div id="modal" class="modal" hidden></div>
+  <div id="avisos" class="avisos" aria-live="polite"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/nucleo.js"></script>
+  <script src="js/secciones/asistencia.js"></script>
+  <script src="js/secciones/issues.js"></script>
+  <script src="js/secciones/redes.js"></script>
+  <script src="js/secciones/taller.js"></script>
+  <script src="js/secciones/whatsapp.js"></script>
+  <script src="js/secciones/recordatorios.js"></script>
+  <script src="js/secciones/reportes.js"></script>
+  <script src="js/secciones/configuracion.js"></script>
+  <script>arrancar();</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+/* Sección 4 – tablero de issues e historial */
+.tablero { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.item-issue {
+  display: flex; flex-direction: column; gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 14px;
+  border: 0; border-radius: 16px;
+  background: var(--sup2); color: var(--texto);
+  font: inherit; cursor: pointer;
+}
+.item-issue:hover { background: var(--sel); }
+.item-issue .titulo { font-weight: 600; overflow-wrap: anywhere; }
+.item-issue .meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--apagado); }
+.linea-tiempo { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--pista); display: flex; flex-direction: column; gap: 14px; }
+.linea-tiempo li { position: relative; display: flex; flex-direction: column; gap: 6px; }
+.linea-tiempo li::before { content: ''; position: absolute; left: -20px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--azul); }
+
+@media (max-width: 960px) {
+  .tablero { grid-template-columns: 1fr; }
+}
