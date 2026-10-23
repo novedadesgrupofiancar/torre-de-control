@@ -1,9 +1,9 @@
 /* ===== Sección 3 – Marcas / llegadas tarde / home office / faltas ===== */
 Modulos.Asistencia = (() => {
-  const EVENTOS = ['Falta', 'Llegada tarde', 'Home office', 'No marcó'];
+  const EVENTOS = ['Falta', 'Llegada tarde', 'Se retira antes', 'Home office', 'No marcó'];
   const TIPOS_HO = ['Excepción', 'Premio', 'Otro'];
   // Columnas del contador por agente
-  const CONTADOR = [['Llegada tarde', 'Tarde'], ['Falta', 'Faltas'], ['Home office', 'HO'], ['No marcó', 'No marcó']];
+  const CONTADOR = [['Llegada tarde', 'Tarde'], ['Se retira antes', 'Se retira'], ['Falta', 'Faltas'], ['Home office', 'HO'], ['No marcó', 'No marcó']];
   let vista, registros = [];
 
   async function render(v, s) {
