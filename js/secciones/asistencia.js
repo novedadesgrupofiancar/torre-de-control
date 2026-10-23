@@ -1,9 +1,10 @@
 /* ===== Sección 3 – Marcas / llegadas tarde / home office / faltas ===== */
 Modulos.Asistencia = (() => {
-  const EVENTOS = ['Falta', 'Llegada tarde', 'Se retira antes', 'Home office', 'No marcó'];
+  const EVENTOS = ['Falta', 'Llegada tarde', 'Se retira antes', 'Recupero de horas', 'Licencia', 'Home office', 'No marcó'];
   const TIPOS_HO = ['Excepción', 'Premio', 'Otro'];
   // Columnas del contador por agente
-  const CONTADOR = [['Llegada tarde', 'Tarde'], ['Se retira antes', 'Se retira'], ['Falta', 'Faltas'], ['Home office', 'HO'], ['No marcó', 'No marcó']];
+  const CONTADOR = [['Llegada tarde', 'Tarde'], ['Se retira antes', 'Se retira'], ['Falta', 'Faltas'],
+    ['Recupero de horas', 'Recupero'], ['Licencia', 'Licencia'], ['Home office', 'HO'], ['No marcó', 'No marcó']];
   let vista, registros = [];
 
   async function render(v, s) {
@@ -37,7 +38,7 @@ Modulos.Asistencia = (() => {
             <h2>Contador por agente</h2>
             <p class="nota">Cantidad de registros según el agente y las fechas filtradas en el registro.</p>
           </div>
-          <div id="contador"></div>
+          <div id="contador" class="contador-envoltura"></div>
         </section>
       </div>
       <section class="tarjeta">

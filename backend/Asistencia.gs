@@ -3,7 +3,7 @@
  * y reporte semanal para RRHH.
  */
 
-const EVENTOS_ASISTENCIA = ['Falta', 'Llegada tarde', 'Se retira antes', 'Home office', 'No marcó'];
+const EVENTOS_ASISTENCIA = ['Falta', 'Llegada tarde', 'Se retira antes', 'Recupero de horas', 'Licencia', 'Home office', 'No marcó'];
 const TIPOS_HO = ['Excepción', 'Premio', 'Otro'];
 
 function registrarAsistencia(d) {
@@ -50,8 +50,9 @@ function reporteRRHH(fecha) {
     .filter(r => r.desde <= domingo && (r.hasta || r.desde) >= lunes)
     .sort((a, b) => (a.desde + a.agente).localeCompare(b.desde + b.agente));
 
-  const titulos = { 'No marcó': 'No marcó', 'Falta': 'Faltas', 'Llegada tarde': 'Llegadas tarde', 'Se retira antes': 'Se retiró antes', 'Home office': 'Home office' };
-  const grupos = ['No marcó', 'Falta', 'Llegada tarde', 'Se retira antes', 'Home office'].map(evento => ({
+  const titulos = { 'No marcó': 'No marcó', 'Falta': 'Faltas', 'Llegada tarde': 'Llegadas tarde', 'Se retira antes': 'Se retiró antes',
+    'Recupero de horas': 'Recupero de horas', 'Licencia': 'Licencias', 'Home office': 'Home office' };
+  const grupos = ['No marcó', 'Falta', 'Llegada tarde', 'Se retira antes', 'Recupero de horas', 'Licencia', 'Home office'].map(evento => ({
     evento: evento,
     titulo: titulos[evento],
     items: registros.filter(r => r.evento === evento)

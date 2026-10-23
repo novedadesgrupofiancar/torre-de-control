@@ -1,10 +1,14 @@
 /* Sección 3 – contador por agente */
-.contador-fila { display: grid; grid-template-columns: minmax(90px, 1fr) repeat(5, 64px); gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--pista); }
+.contador-fila { display: grid; grid-template-columns: minmax(90px, 1fr) repeat(7, 64px); gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--pista); }
 .contador-fila.cab { border-top: 0; padding-top: 0; }
 .contador-fila.cab span { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--apagado); text-align: center; }
 .contador-num { text-align: center; font-family: var(--mono); font-size: 16px; border-radius: 10px; background: var(--sup2); padding: 4px 0; }
 .contador-num.cero { color: var(--apagado); background: transparent; }
 
 @media (max-width: 560px) {
-  .contador-fila { grid-template-columns: minmax(70px, 1fr) repeat(5, 46px); }
+  .contador-fila { grid-template-columns: minmax(70px, 1fr) repeat(7, 46px); }
 }
+
+/* Con 7 columnas el contador puede no entrar en pantallas chicas: se desplaza de costado */
+.contador-envoltura { overflow-x: auto; }
+.contador-envoltura .contador-fila { min-width: max-content; }
