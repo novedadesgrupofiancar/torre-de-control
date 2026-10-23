@@ -114,6 +114,7 @@ a { color: var(--azul-claro); }
 .menu-lista { display: flex; flex-direction: column; gap: 4px; }
 .menu-sep { height: 1px; background: var(--pista); margin: 8px 6px; }
 .menu-item {
+  text-decoration: none;
   display: flex;
   align-items: center;
   gap: 12px;

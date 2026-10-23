@@ -62,6 +62,11 @@ const ACCIONES = {
   listarControlesWhatsApp: () => listarControlesWhatsApp(),
   registrarControlWhatsApp: d => registrarControlWhatsApp(d),
 
+  // Credenciales (llegan cifradas desde el navegador)
+  listarCredenciales: () => listarCredenciales(),
+  guardarCredencial: d => guardarCredencial(d),
+  borrarCredencial: d => borrarCredencial(d),
+
   // Sección 8
   obtenerRecordatorios: () => obtenerRecordatorios(),
   obtenerCheckDiario: () => obtenerCheckDiario(),

@@ -27,7 +27,11 @@ function configInicial_() {
       venta: ['vend', 'no tiene mas', 'no tiene más', 'ya no la tiene', 'ya no lo tiene', 'lo tiene el hijo'],
       ya_vino: ['ya lo hizo', 'ya lo realiz', 'ya realiz', 'hizo', 'falta', 'km', 'mil']
     },
-    destinatarios: { jimena: '', rrhh: '' }
+    destinatarios: { jimena: '', rrhh: '' },
+    // Links que aparecen en el menú lateral
+    enlaces: { miro: '' },
+    // Datos para verificar la clave de Credenciales (sal y texto de control cifrado; la clave no se guarda)
+    boveda: { sal: '', iv: '', verificador: '' }
   };
 }
 
@@ -52,7 +56,9 @@ function guardarConfiguracion(clave, valor) {
     campanias: normalizarCampanias_,
     listas: v => normalizarListas_(v, Object.keys(configInicial_().listas)),
     palabras_clave: v => normalizarListas_(v, Object.keys(configInicial_().palabras_clave)),
-    destinatarios: normalizarDestinatarios_
+    destinatarios: normalizarDestinatarios_,
+    enlaces: normalizarEnlaces_,
+    boveda: normalizarBoveda_
   };
   if (!normalizadores[clave]) throw new Error('Bloque de configuración desconocido.');
   const limpio = normalizadores[clave](valor);
@@ -136,6 +142,21 @@ function normalizarListas_(obj, claves) {
     });
   });
   return limpio;
+}
+
+function normalizarEnlaces_(obj) {
+  obj = obj || {};
+  const miro = texto_(obj.miro, 500);
+  if (miro && miro.indexOf('https://') !== 0) throw new Error('El link de Miro tiene que empezar con https://');
+  return { miro: miro };
+}
+
+function normalizarBoveda_(obj) {
+  obj = obj || {};
+  if (PropertiesService.getScriptProperties().getProperty('BOVEDA_CREADA')) throw new Error('La clave de Credenciales ya está creada.');
+  const b = { sal: base64Valido_(obj.sal, 'sal', 60), iv: base64Valido_(obj.iv, 'iv', 40), verificador: base64Valido_(obj.verificador, 'verificador', 200) };
+  PropertiesService.getScriptProperties().setProperty('BOVEDA_CREADA', 'sí');
+  return b;
 }
 
 function normalizarDestinatarios_(obj) {

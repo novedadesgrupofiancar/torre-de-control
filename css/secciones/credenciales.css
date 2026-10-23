@@ -1,0 +1,6 @@
+/* Credenciales: lista desplegable de credenciales e historial */
+.credencial summary strong { flex: 1; }
+.credencial-texto { margin: 10px 0; max-height: none; }
+.credencial .acciones { justify-content: flex-start; }
+.historial-credencial { margin-top: 12px; }
+.historial-credencial > summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; }

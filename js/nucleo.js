@@ -14,6 +14,7 @@ const SECCIONES = [
   { id: 'whatsapp', chip: '7', nombre: 'Control de WhatsApp', modulo: 'WhatsApp' },
   { id: 'recordatorios', chip: '8', nombre: 'Recordatorios', modulo: 'Recordatorios' },
   { id: 'reportes', chip: 'R', nombre: 'Reportes', modulo: 'Reportes', extra: true },
+  { id: 'credenciales', chip: 'Cr', nombre: 'Credenciales', modulo: 'Credenciales', extra: true },
   { id: 'config', chip: 'C', nombre: 'Configuración', modulo: 'Configuracion', extra: true }
 ];
 
@@ -65,7 +66,7 @@ async function api(accion, datos, claveAcceso) {
 function arrancar() {
   document.getElementById('menu-lista').addEventListener('click', e => {
     const boton = e.target.closest('.menu-item');
-    if (boton) irA(boton.dataset.id);
+    if (boton && boton.dataset.id) irA(boton.dataset.id);
   });
   document.getElementById('f-ingreso').addEventListener('submit', ingresar);
   if (obtenerClave()) abrirPanel();
@@ -132,7 +133,17 @@ function pintarMenu() {
     <button type="button" class="menu-item${s.id === Estado.seccion ? ' activo' : ''}" data-id="${s.id}"
       ${s.id === Estado.seccion ? 'aria-current="page"' : ''}>
       <span class="chip-num">${s.chip}</span><span>${esc(s.nombre)}</span>
-    </button>`).join('');
+    </button>`).join('') + enlacesMenu();
+}
+
+/** Links externos del menú (se cargan en Configuración › Links del menú; abren en otra pestaña) */
+function enlacesMenu() {
+  const miro = Estado.config && Estado.config.enlaces && Estado.config.enlaces.miro;
+  if (!miro || !/^https:\/\//.test(miro)) return '';
+  return `<div class="menu-sep"></div>
+    <a class="menu-item" href="${esc(miro)}" target="_blank" rel="noopener">
+      <span class="chip-num">M</span><span>Miro</span>
+    </a>`;
 }
 
 async function irA(id) {

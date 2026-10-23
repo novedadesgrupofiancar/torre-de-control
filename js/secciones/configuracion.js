@@ -27,7 +27,8 @@ Modulos.Configuracion = (() => {
         <div class="bloque-interno" id="b-listas"></div>
         <div class="bloque-interno separado" id="b-palabras"></div>
       </section>
-      <section class="tarjeta" id="b-destinatarios"></section>`;
+      <section class="tarjeta" id="b-destinatarios"></section>
+      <section class="tarjeta" id="b-enlaces"></section>`;
     pintarTodo();
   }
 
@@ -40,6 +41,26 @@ Modulos.Configuracion = (() => {
     pintarListas('b-listas', 'listas', 'Listas editables', 'Lo que se quita de una lista no se borra de los registros ya guardados.', LISTAS);
     pintarListas('b-palabras', 'palabras_clave', 'Palabras clave de No aplica', 'Se usan en Campañas para clasificar los "No aplica" por el comentario del agente, en este orden (gana la primera que coincide), sin distinguir mayúsculas ni acentos. Un comentario con formato de orden de taller (dd/mm/aaaa | número | NN K) cuenta como "ya vino".', PALABRAS);
     pintarDestinatarios();
+    pintarEnlaces();
+  }
+
+  /* ---------- Links del menú ---------- */
+
+  function pintarEnlaces() {
+    const b = vista.querySelector('#b-enlaces');
+    const e = Estado.config.enlaces || {};
+    b.innerHTML = `
+      <div><h2>Links del menú</h2><p class="nota">Aparecen al final del menú lateral y abren en otra pestaña.</p></div>
+      <form class="form" autocomplete="off">
+        <div class="grid-campos">${campo('Miro', `<input type="url" name="miro" value="${esc(e.miro || '')}" placeholder="https://miro.com/app/board/…">`, 'ancho-2')}</div>
+        <div class="acciones"><button type="submit" class="btn btn-primario">Guardar links</button></div>
+      </form>`;
+    const form = b.querySelector('form');
+    form.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      await guardar(form.querySelector('[type=submit]'), 'enlaces', leerForm(form));
+      pintarMenu();
+    });
   }
 
   /** Guarda un bloque y vuelve a dibujar todo con la configuración que devuelve el servidor */
