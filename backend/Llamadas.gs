@@ -26,6 +26,7 @@ function guardarCargaLlamadas(d) {
   const filas = agentes.map(fila);
   if (d.equipo) filas.push(fila(Object.assign({}, d.equipo, { agente: AGENTE_EQUIPO, interno: '' })));
   agregarFilas_('llamadas', filas);
+  guardarFirma_(d.claveFirma, d.firma);
   return { carga_id: cargaId, filas: filas.length };
 }
 

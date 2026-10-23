@@ -56,9 +56,18 @@ const LlamadasLogica = (() => {
       const a = res[interno] = res[interno] || { atendidas: 0, ofrecidas: 0, colas: [] };
       a.atendidas += atendidas;
       a.ofrecidas += ofrecidas;
-      a.colas.push({ cola: f.Queue.replace(/^\d+\s+/, ''), atendidas, ofrecidas: Math.round(ofrecidas), pct: ofrecidas ? atendidas / ofrecidas : null });
+      // Con varios archivos (ej: un reporte por día) la misma cola se suma
+      const nombre = f.Queue.replace(/^\d+\s+/, '');
+      let cola = a.colas.find(c => c.cola === nombre);
+      if (!cola) a.colas.push(cola = { cola: nombre, atendidas: 0, ofrecidas: 0 });
+      cola.atendidas += atendidas;
+      cola.ofrecidas += ofrecidas;
     });
-    Object.values(res).forEach(a => { a.pct = a.ofrecidas ? a.atendidas / a.ofrecidas : null; a.ofrecidas = Math.round(a.ofrecidas); });
+    Object.values(res).forEach(a => {
+      a.pct = a.ofrecidas ? a.atendidas / a.ofrecidas : null;
+      a.ofrecidas = Math.round(a.ofrecidas);
+      a.colas.forEach(c => { c.pct = c.ofrecidas ? c.atendidas / c.ofrecidas : null; c.ofrecidas = Math.round(c.ofrecidas); });
+    });
     return res;
   }
 

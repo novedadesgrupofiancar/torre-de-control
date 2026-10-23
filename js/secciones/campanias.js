@@ -216,21 +216,53 @@ Modulos.Campanias = (() => {
         <div><h2>Cruce con 3CX</h2>
           <p class="nota">Gestiones de la semana: <span class="mono">${semana.length}</span> (${esc(textoReferencia(datos))}).
           Se cruzan con las llamadas salientes del mismo período y del mismo agente.</p></div>
-        <label class="zona-pegar zona-archivo">
-          <input type="file" id="c-csv" accept=".csv,text/csv" multiple hidden>
-          Elegí el reporte de salientes de 3CX (.csv). Puede ser uno con todos los agentes o varios archivos.
-        </label>
+        <p class="nota" id="c-cruce-origen"><span class="cargando">Leyendo los reportes de salientes recibidos por mail…</span></p>
         <div id="c-cruce-resultado"></div>
+        <details class="sin-respaldo">
+          <summary>Carga manual del CSV de salientes</summary>
+          <label class="zona-pegar zona-archivo" style="margin-top:10px">
+            <input type="file" id="c-csv" accept=".csv,text/csv" multiple hidden>
+            Elegí el reporte de salientes de 3CX (.csv). Puede ser uno con todos los agentes o varios archivos.
+          </label>
+        </details>
       </section>`;
-    cont.querySelector('#c-csv').addEventListener('change', e => procesarCSV(e.target.files, semana));
+    cont.querySelector('#c-csv').addEventListener('change', async e => {
+      try {
+        const textos = await Promise.all([...e.target.files].map(a => a.text()));
+        cruzarYGuardar(textos, semana);
+      } catch (err) { aviso(err.message, 'error'); }
+    });
+    cruzarDesdeMail(semana);
   }
 
-  async function procesarCSV(archivos, semana) {
+  /** Usa los reportes "Salientes por día" que llegaron por mail desde el inicio de la semana */
+  async function cruzarDesdeMail(semana) {
+    const origenTxt = vista.querySelector('#c-cruce-origen');
+    const desde = inicioSemana(datos);
+    const claveFirma = 'cruce|' + datos.mes + '|' + desde;
+    let r;
+    try {
+      r = await api('reportes3CXDelPeriodo', { desde: desde.slice(0, 10), hasta: hoyISO(), tipos: ['salientes'], claveFirma });
+    } catch (e) {
+      if (origenTxt) origenTxt.textContent = 'No se pudieron leer los mails: ' + e.message;
+      return;
+    }
+    if (!origenTxt || !origenTxt.isConnected) return;
+    if (r.error) { origenTxt.textContent = r.error; return; }
+    if (!r.archivos.length) {
+      origenTxt.textContent = 'Todavía no llegó ningún reporte de salientes de este período. Podés usar la carga manual.';
+      return;
+    }
+    origenTxt.textContent = `Salientes recibidos por mail: ${r.archivos.length} ${r.archivos.length === 1 ? 'día' : 'días'} (${r.archivos.map(a => fmtFecha(a.fecha_datos).slice(0, 5)).join(', ')}).`;
+    const firma = r.archivos.map(a => a.id).sort().join(',') + '|' + semana.length;
+    cruzarYGuardar(r.archivos.map(a => a.texto), semana, claveFirma, firma === r.firma_guardada ? null : firma);
+  }
+
+  /** Cruza y guarda el resultado. Si viene del mail y ya estaba guardado igual (firma null), no lo repite. */
+  async function cruzarYGuardar(textos, semana, claveFirma, firma) {
     const salida = vista.querySelector('#c-cruce-resultado');
-    if (!archivos.length) return;
     let llamadas;
     try {
-      const textos = await Promise.all([...archivos].map(a => a.text()));
       llamadas = L.llamadasDe3CX(textos);
     } catch (e) {
       aviso(e.message, 'error');
@@ -241,10 +273,10 @@ Modulos.Campanias = (() => {
     const cruce = L.cruzar(semana, llamadas, desde, hasta);
     pintarResultadoCruce(salida, cruce);
 
-    if (!cruce.detalle.length) return;
+    if (!cruce.detalle.length || (claveFirma && !firma)) return;
     try {
       await api('guardarCruce3CX', {
-        mes: datos.mes, desde, hasta,
+        mes: datos.mes, desde, hasta, claveFirma, firma,
         filas: cruce.detalle.map(d => ({
           agente: d.agente_panel, origen: d.origen, hoja: d.hoja, km: d.km, cliente: d.cliente,
           telefono: [d.telefono, d.telefono_alternativo].filter(Boolean).join(' / '), oportunidad: d.oportunidad, resultado: d.resultado

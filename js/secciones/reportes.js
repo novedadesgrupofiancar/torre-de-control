@@ -60,6 +60,8 @@ Modulos.Reportes = (() => {
       const fecha = vista.querySelector('#jim-fecha').value || hoyISO();
       const ok = await conBoton(e.currentTarget, async () => {
         // Campañas: reporte semanal contra la última foto (si falla, el resto del resumen sale igual)
+        // Primero se guarda la semana con los reportes de 3CX recibidos por mail (si hay nuevos)
+        try { await Modulos.Llamadas.asegurarCargaSemana(fecha); } catch (err) { /* se usa la última carga guardada */ }
         const mes = Modulos.Campanias.mesPorDefecto();
         const [datos, campanias] = await Promise.all([
           api('datosResumenJimena', { fecha }),

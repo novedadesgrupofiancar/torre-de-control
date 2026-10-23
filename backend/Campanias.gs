@@ -207,5 +207,6 @@ function guardarCruce3CX(d) {
   }));
   if (!filas.length) throw new Error('No hay gestiones para guardar.');
   agregarFilas_('cruces_3cx', filas);
+  guardarFirma_(d.claveFirma, d.firma);
   return { cruce_id: cruceId, filas: filas.length };
 }

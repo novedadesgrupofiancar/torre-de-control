@@ -24,6 +24,7 @@ const ACCIONES = {
   // Sección 1
   guardarCargaLlamadas: d => guardarCargaLlamadas(d),
   listarCargasLlamadas: () => listarCargasLlamadas(),
+  reportes3CXDelPeriodo: d => reportes3CXDelPeriodo(d),
 
   // Sección 2
   leerCampania: d => leerCampania(d.mes),

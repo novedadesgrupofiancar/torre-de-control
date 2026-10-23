@@ -1,27 +1,115 @@
 /* ===== Sección 1 – Llamadas y conexión ===== */
 Modulos.Llamadas = (() => {
   const L = LlamadasLogica;
-  let vista, resultado = null, agenteLinea = '';
+  let vista, resultado = null, agenteLinea = '', origen = '';
+
+  /** La semana va de lunes a domingo: el fin de semana se lee para detectar sesiones sin cerrar */
+  function semanaDe(fecha) {
+    const lunes = lunesDe(fecha);
+    return { lunes, domingo: sumarDias(lunes, 6), claveFirma: 'llamadas|' + lunes };
+  }
 
   async function render(v, s) {
     vista = v;
     v.innerHTML = banners([{ tipo: 'naranja', html: 'Sacar reportes de llamada los viernes' }]) + encabezado(s) + `
       <section class="tarjeta">
-        <div><h2>Cargar reportes de 3CX</h2>
-          <p class="nota">Elegí los 2 CSV: % de llamadas atendidas e historial de conexión (agent_login_history). Pueden ser de un día, de una semana o de un mes.</p></div>
+        <div><h2>Reportes recibidos por mail</h2>
+          <p class="nota">Los reportes diarios de 3CX llegan a la cuenta del panel y se leen solos al abrir esta sección.</p></div>
+        <div class="acciones" style="justify-content:flex-start">
+          <div style="min-width:200px">${campo('Semana que incluye el día', `<input type="date" id="ll-fecha" value="${sumarDias(hoyISO(), -1)}">`)}</div>
+          <div class="crece"></div>
+          <button type="button" class="btn btn-sec" id="ll-actualizar">Actualizar</button>
+        </div>
+        <div id="ll-estado-mail" class="lista"><div class="cargando">Leyendo los mails…</div></div>
+      </section>
+      <div id="ll-resultado" class="vista"></div>
+      <section class="tarjeta">
+        <div><h2>Carga manual</h2>
+          <p class="nota">Solo si hace falta: elegí los 2 CSV (% de llamadas atendidas e historial de conexión). Pueden ser de un día, una semana o un mes.</p></div>
         <label class="zona-pegar zona-archivo">
           <input type="file" id="ll-csv" accept=".csv,text/csv" multiple hidden>
           Elegí los dos archivos .csv
         </label>
       </section>
-      <div id="ll-resultado" class="vista"></div>
       <section class="tarjeta">
         <h2>Historial de cargas</h2>
         <div id="ll-historial"><div class="cargando">Cargando…</div></div>
       </section>`;
     v.querySelector('#ll-csv').addEventListener('change', e => procesarArchivos(e.target.files));
-    if (resultado) pintarResultado();
+    v.querySelector('#ll-actualizar').addEventListener('click', cargarDesdeMail);
+    v.querySelector('#ll-fecha').addEventListener('change', cargarDesdeMail);
     cargarHistorial();
+    await cargarDesdeMail();
+  }
+
+  /** Pide al backend los reportes de la semana (lee los mails nuevos) y los procesa */
+  async function obtenerSemana(fecha) {
+    const sem = semanaDe(fecha);
+    const r = await api('reportes3CXDelPeriodo', { desde: sem.lunes, hasta: sem.domingo, tipos: ['atendidas', 'conexion'], claveFirma: sem.claveFirma });
+    const atendidas = r.archivos.filter(a => a.tipo === 'atendidas');
+    const conexion = r.archivos.filter(a => a.tipo === 'conexion');
+    let procesado = null;
+    if (atendidas.length && conexion.length) {
+      const conInterno = Estado.config.agentes.filter(a => a.interno);
+      procesado = L.procesar(atendidas.map(a => a.texto).join('\n'), conexion.map(a => a.texto).join('\n'), conInterno, Estado.config.horarios);
+      if (!procesado.agentes.length) procesado = null;
+    }
+    const firma = r.archivos.map(a => a.id).sort().join(',');
+    return { sem, r, atendidas, conexion, procesado, firma, yaGuardado: !!firma && firma === r.firma_guardada };
+  }
+
+  /** Lo usa el resumen para Jimena: deja guardada la semana si llegaron reportes nuevos */
+  async function asegurarCargaSemana(fecha) {
+    const s = await obtenerSemana(fecha);
+    if (s.procesado && !s.yaGuardado) await guardarResultado(s.procesado, s.sem.claveFirma, s.firma);
+  }
+
+  async function cargarDesdeMail() {
+    const caja = vista.querySelector('#ll-estado-mail');
+    const boton = vista.querySelector('#ll-actualizar');
+    const fecha = vista.querySelector('#ll-fecha').value || sumarDias(hoyISO(), -1);
+    caja.innerHTML = '<div class="cargando">Leyendo los mails…</div>';
+    boton.disabled = true;
+    let s;
+    try {
+      s = await obtenerSemana(fecha);
+    } catch (e) {
+      caja.innerHTML = `<p class="pildoras"><span class="pildora pildora-ambar">Error</span><span>${esc(e.message)}</span></p>`;
+      return;
+    } finally {
+      boton.disabled = false;
+    }
+    if (!vista.isConnected) return;
+    const nombres = { atendidas: '% de llamadas atendidas', conexion: 'Conexión de agentes', salientes: 'Salientes por día' };
+    const e = s.r.estado;
+    caja.innerHTML = `
+      ${s.r.error ? `<p class="pildoras"><span class="pildora pildora-ambar">Error</span><span>${esc(s.r.error)}</span></p>` : ''}
+      <p class="nota mono">Última lectura del mail: ${e.ultima_lectura ? fmtFechaHora(e.ultima_lectura) : 'nunca'}</p>
+      <div class="pildoras">${e.ultimo_por_tipo.map(u => u.fecha_mail
+        ? `<span class="pildora pildora-verde">${esc(nombres[u.tipo])}: último recibido ${fmtFechaHora(u.fecha_mail)} (datos del ${fmtFecha(u.fecha_datos)})</span>`
+        : `<span class="pildora pildora-ambar">${esc(nombres[u.tipo])}: todavía no llegó ningún mail</span>`).join('')}</div>
+      <p class="nota">Semana del ${fmtFecha(s.sem.lunes)} al ${fmtFecha(s.sem.domingo)}: ${s.atendidas.length} ${s.atendidas.length === 1 ? 'día' : 'días'} de % atendidas y ${s.conexion.length} de conexión.</p>`;
+
+    if (!s.procesado) {
+      if (origen !== 'manual') {
+        resultado = null;
+        vista.querySelector('#ll-resultado').innerHTML = `<section class="tarjeta">${vacioHtml('Todavía no hay reportes de los dos tipos para esta semana.')}</section>`;
+      }
+      return;
+    }
+    resultado = s.procesado;
+    origen = 'mail';
+    agenteLinea = resultado.agentes[0].interno;
+    pintarResultado();
+    if (!s.yaGuardado) {
+      try {
+        await guardarResultado(resultado, s.sem.claveFirma, s.firma);
+        aviso('Semana actualizada con los reportes recibidos.');
+        cargarHistorial();
+      } catch (err) {
+        aviso('No se pudo guardar la semana: ' + err.message, 'error');
+      }
+    }
   }
 
   async function procesarArchivos(archivos) {
@@ -44,41 +132,41 @@ Modulos.Llamadas = (() => {
       aviso(e.message, 'error');
       return;
     }
+    origen = 'manual';
     agenteLinea = resultado.agentes[0].interno;
     pintarResultado();
-    guardar();
-  }
-
-  /** Guarda el resultado procesado de la carga en la base */
-  async function guardar() {
-    const r = resultado;
-    const filaAgente = a => ({
-      agente: a.agente, interno: a.interno,
-      pct_atendidas: a.atendidas && a.atendidas.pct !== null ? Math.round(a.atendidas.pct * 1000) / 10 : '',
-      atendidas: a.atendidas ? a.atendidas.atendidas : 0,
-      ofrecidas: a.atendidas ? a.atendidas.ofrecidas : 0,
-      detalle_colas: a.atendidas ? a.atendidas.colas.map(c => ({ cola: c.cola, atendidas: c.atendidas, ofrecidas: c.ofrecidas, pct: c.pct === null ? null : Math.round(c.pct * 1000) / 10 })) : [],
-      desconexiones: a.conexion ? a.conexion.desconexiones : 0,
-      minutos_desconectado: a.conexion ? a.conexion.minutos : 0,
-      sesiones_sin_cerrar: a.conexion ? a.conexion.sinCerrar : [],
-      resumen: a.resumen
-    });
     try {
-      await api('guardarCargaLlamadas', {
-        desde: r.desde, hasta: r.hasta,
-        agentes: r.agentes.map(filaAgente),
-        equipo: {
-          pct_atendidas: r.equipo.pct === null ? '' : Math.round(r.equipo.pct * 1000) / 10,
-          atendidas: r.equipo.atendidas, ofrecidas: r.equipo.ofrecidas,
-          desconexiones: r.equipo.desconexiones, minutos_desconectado: r.equipo.minutos,
-          sesiones_sin_cerrar: [], resumen: r.equipo.resumen
-        }
-      });
+      await guardarResultado(resultado);
       aviso('Carga guardada en la base.');
       cargarHistorial();
     } catch (e) {
       aviso('No se pudo guardar la carga: ' + e.message, 'error');
     }
+  }
+
+  /** Guarda el resultado procesado en la base (con firma, para no repetir la misma semana) */
+  async function guardarResultado(r, claveFirma, firma) {
+    const pct = p => (p === null || p === undefined ? '' : Math.round(p * 1000) / 10);
+    const filaAgente = a => ({
+      agente: a.agente, interno: a.interno,
+      pct_atendidas: a.atendidas ? pct(a.atendidas.pct) : '',
+      atendidas: a.atendidas ? a.atendidas.atendidas : 0,
+      ofrecidas: a.atendidas ? a.atendidas.ofrecidas : 0,
+      detalle_colas: a.atendidas ? a.atendidas.colas.map(c => ({ cola: c.cola, atendidas: c.atendidas, ofrecidas: c.ofrecidas, pct: pct(c.pct) })) : [],
+      desconexiones: a.conexion ? a.conexion.desconexiones : 0,
+      minutos_desconectado: a.conexion ? a.conexion.minutos : 0,
+      sesiones_sin_cerrar: a.conexion ? a.conexion.sinCerrar : [],
+      resumen: a.resumen
+    });
+    await api('guardarCargaLlamadas', {
+      desde: r.desde, hasta: r.hasta, claveFirma, firma,
+      agentes: r.agentes.map(filaAgente),
+      equipo: {
+        pct_atendidas: pct(r.equipo.pct), atendidas: r.equipo.atendidas, ofrecidas: r.equipo.ofrecidas,
+        desconexiones: r.equipo.desconexiones, minutos_desconectado: r.equipo.minutos,
+        sesiones_sin_cerrar: [], resumen: r.equipo.resumen
+      }
+    });
   }
 
   function pintarResultado() {
@@ -221,5 +309,5 @@ Modulos.Llamadas = (() => {
       </details>`).join('')}</div>` : vacioHtml('Todavía no hay cargas guardadas.');
   }
 
-  return { render };
+  return { render, asegurarCargaSemana };
 })();
