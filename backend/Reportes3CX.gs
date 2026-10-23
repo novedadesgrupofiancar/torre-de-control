@@ -50,6 +50,17 @@ function adjuntosCsv_(parte, lista) {
   return lista;
 }
 
+/**
+ * Gmail entrega el adjunto en base64 "web safe" y a veces sin el relleno final ("="),
+ * que Utilities no acepta: se pasa a base64 común con relleno. Si ya viene en bytes, se usa tal cual.
+ */
+function decodificarAdjunto_(datos) {
+  if (typeof datos !== 'string') return datos;
+  let b64 = datos.replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+  return Utilities.base64Decode(b64);
+}
+
 /** Lee los mails nuevos con reportes de 3CX y guarda sus adjuntos. Devuelve el estado. */
 function importarReportes3CX() {
   const lock = LockService.getScriptLock();
@@ -65,7 +76,7 @@ function importarReportes3CX() {
       adjuntosCsv_(mensaje.payload).forEach(a => {
         if (leidos[m.id + '|' + a.nombre]) return;
         const datos = Gmail.Users.Messages.Attachments.get('me', m.id, a.adjuntoId).data;
-        const bytes = Utilities.base64DecodeWebSafe(datos);
+        const bytes = decodificarAdjunto_(datos);
         const texto = Utilities.newBlob(bytes).getDataAsString('UTF-8').replace(/^﻿/, '');
         const tipo = tipoReporte3CX_(texto);
         const fila = {
