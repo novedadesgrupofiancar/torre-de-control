@@ -14,7 +14,7 @@ function configInicial_() {
     // {mes: 'aaaa-mm', link_chevrolet, link_marcas}
     campanias: [],
     listas: {
-      motivos: ['Enfermedad'],
+      motivos: ['Enfermedad', 'Premio', 'Evento familiar', 'Trámite', 'Otro'],
       talleres: [],
       redes: ['Geely', 'JAC Auto', 'JAC Camión', 'Lynk & Co', 'Shopping de Autos', 'Chevrolet', 'Fiat', 'Vehículos Fiancar'],
       turnos: ['Mañana'],
