@@ -131,9 +131,45 @@ function reportes3CXDelPeriodo(d) {
     .sort((a, b) => (a.fecha_datos + a.fecha_mail).localeCompare(b.fecha_datos + b.fecha_mail))
     .map(f => ({
       id: f.id, tipo: f.tipo, fecha_datos: f.fecha_datos, fecha_mail: f.fecha_mail, nombre: f.adjunto,
+      manual: f.mensaje_id.indexOf('manual:') === 0,
       texto: DriveApp.getFileById(f.archivo_id).getBlob().getDataAsString('UTF-8').replace(/^﻿/, '')
     }));
   return { estado: estado, error: errorLectura, archivos: archivos, firma_guardada: firmaGuardada_(d.claveFirma) };
+}
+
+/**
+ * Guarda un CSV de salientes subido a mano desde el panel, junto a los que llegan por mail.
+ * Un archivo puede abarcar varios días o meses: se registra una fila por mes, con la primera fecha
+ * de ese mes, así aparece en el período de cada mes que cubre. El mismo archivo subido dos veces no se repite.
+ */
+function subirReporte3CX(d) {
+  const texto = String(d.texto || '').replace(/^﻿/, '');
+  const nombre = texto_(d.nombre, 200) || 'salientes.csv';
+  if (tipoReporte3CX_(texto) !== 'salientes') throw new Error(nombre + ' no es un reporte de salientes de 3CX (columnas Call Time, Direction, From, To).');
+  const huella = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, texto, Utilities.Charset.UTF_8));
+  const mensajeId = 'manual:' + huella;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const previas = leerFilas_('reportes_3cx').filter(f => f.mensaje_id === mensajeId);
+    if (previas.length) return { nombre: nombre, repetido: true, meses: previas.map(f => f.fecha_datos.slice(0, 7)) };
+    const primeraPorMes = {};
+    (texto.match(/^\d{4}-\d{2}-\d{2}/gm) || []).forEach(f => {
+      const mes = f.slice(0, 7);
+      if (!primeraPorMes[mes] || f < primeraPorMes[mes]) primeraPorMes[mes] = f;
+    });
+    const meses = Object.keys(primeraPorMes).sort();
+    if (!meses.length) throw new Error(nombre + ' no tiene llamadas con fecha.');
+    const archivo = obtenerCarpeta3CX_().createFile(Utilities.newBlob(texto, 'text/csv', 'salientes ' + meses[0] + ' (subido a mano) ' + nombre));
+    const ahora = ahora_();
+    agregarFilas_('reportes_3cx', meses.map(m => ({
+      id: nuevoId_(), registrado_en: ahora, mensaje_id: mensajeId, adjunto: nombre, fecha_mail: ahora,
+      tipo: 'salientes', fecha_datos: primeraPorMes[m], archivo_id: archivo.getId()
+    })));
+    return { nombre: nombre, repetido: false, meses: meses };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /* ---------- Firmas: evitan guardar dos veces el mismo resultado ---------- */

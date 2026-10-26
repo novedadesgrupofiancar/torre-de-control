@@ -205,61 +205,87 @@ Modulos.Campanias = (() => {
 
   /* ---------- Vista 3: cruce con 3CX ---------- */
 
-  function gestionesDeLaSemana() {
-    return filasMapeadas.filter(f => f.cambio && f.oportunidad);
+  /** El cruce es mensual: todas las gestiones de la planilla contra todas las salientes del mes */
+  function gestionesDelMes() {
+    return filasMapeadas.filter(f => f.oportunidad);
+  }
+  function periodoDelMes(mes) {
+    const ultimo = new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0).getDate();
+    return { desde: mes + '-01 00:00:00', hasta: mes + '-' + String(ultimo).padStart(2, '0') + ' 23:59:59' };
   }
 
   function pintarCruce(cont) {
-    const semana = gestionesDeLaSemana();
+    const gestiones = gestionesDelMes();
     cont.innerHTML = `
       <section class="tarjeta">
         <div><h2>Cruce con 3CX</h2>
-          <p class="nota">Gestiones de la semana: <span class="mono">${semana.length}</span> (${esc(textoReferencia(datos))}).
-          Se cruzan con las llamadas salientes del mismo período y del mismo agente.</p></div>
-        <p class="nota" id="c-cruce-origen"><span class="cargando">Leyendo los reportes de salientes recibidos por mail…</span></p>
+          <p class="nota">Gestiones del mes: <span class="mono">${gestiones.length}</span>.
+          Se cruzan con todas las llamadas salientes del mes que hay guardadas (las que llegan por mail y las que subiste a mano), del mismo agente.</p></div>
+        <p class="nota" id="c-cruce-origen"><span class="cargando">Leyendo las salientes guardadas del mes…</span></p>
         <div id="c-cruce-resultado"></div>
         <details class="sin-respaldo">
-          <summary>Carga manual del CSV de salientes</summary>
+          <summary>Subir CSV de salientes</summary>
           <label class="zona-pegar zona-archivo" style="margin-top:10px">
             <input type="file" id="c-csv" accept=".csv,text/csv" multiple hidden>
             Elegí el reporte de salientes de 3CX (.csv). Puede ser uno con todos los agentes o varios archivos.
+            Queda guardado y se suma al cruce del mes; si subís el mismo archivo dos veces, no se repite.
           </label>
         </details>
       </section>`;
-    cont.querySelector('#c-csv').addEventListener('change', async e => {
-      try {
-        const textos = await Promise.all([...e.target.files].map(a => a.text()));
-        cruzarYGuardar(textos, semana);
-      } catch (err) { aviso(err.message, 'error'); }
-    });
-    cruzarDesdeMail(semana);
+    cont.querySelector('#c-csv').addEventListener('change', e => subirSalientes([...e.target.files], gestiones));
+    cruzarDelMes(gestiones);
   }
 
-  /** Usa los reportes "Salientes por día" que llegaron por mail desde el inicio de la semana */
-  async function cruzarDesdeMail(semana) {
+  /** Guarda los CSV en la base y vuelve a cruzar con todo lo del mes */
+  async function subirSalientes(archivos, gestiones) {
+    if (!archivos.length) return;
     const origenTxt = vista.querySelector('#c-cruce-origen');
-    const desde = inicioSemana(datos);
-    const claveFirma = 'cruce|' + datos.mes + '|' + desde;
+    const partes = [];
+    for (const a of archivos) {
+      if (origenTxt) origenTxt.innerHTML = `<span class="cargando">Guardando ${esc(a.name)}…</span>`;
+      try {
+        const texto = await a.text();
+        L.llamadasDe3CX([texto]); // valida las columnas antes de subirlo
+        const r = await api('subirReporte3CX', { nombre: a.name, texto });
+        partes.push(r.repetido ? `${a.name}: ya estaba guardado` : `${a.name}: guardado`);
+      } catch (e) {
+        aviso(a.name + ': ' + e.message, 'error');
+      }
+    }
+    if (partes.length) aviso(partes.join(' · '));
+    cruzarDelMes(gestiones);
+  }
+
+  /** Lee todas las salientes guardadas del mes (mail + subidas a mano) y cruza */
+  async function cruzarDelMes(gestiones) {
+    const origenTxt = vista.querySelector('#c-cruce-origen');
+    const p = periodoDelMes(datos.mes);
+    const claveFirma = 'cruce|' + datos.mes;
     let r;
     try {
-      r = await api('reportes3CXDelPeriodo', { desde: desde.slice(0, 10), hasta: hoyISO(), tipos: ['salientes'], claveFirma });
+      r = await api('reportes3CXDelPeriodo', { desde: p.desde.slice(0, 10), hasta: p.hasta.slice(0, 10), tipos: ['salientes'], claveFirma });
     } catch (e) {
-      if (origenTxt) origenTxt.textContent = 'No se pudieron leer los mails: ' + e.message;
+      if (origenTxt) origenTxt.textContent = 'No se pudieron leer las salientes: ' + e.message;
       return;
     }
     if (!origenTxt || !origenTxt.isConnected) return;
-    if (r.error) { origenTxt.textContent = r.error; return; }
+    if (r.error) aviso(r.error, 'error');
     if (!r.archivos.length) {
-      origenTxt.textContent = 'Todavía no llegó ningún reporte de salientes de este período. Podés usar la carga manual.';
+      origenTxt.textContent = 'Todavía no hay salientes guardadas de este mes. Subí el CSV de 3CX abajo.';
+      vista.querySelector('#c-cruce-resultado').innerHTML = '';
       return;
     }
-    origenTxt.textContent = `Salientes recibidos por mail: ${r.archivos.length} ${r.archivos.length === 1 ? 'día' : 'días'} (${r.archivos.map(a => fmtFecha(a.fecha_datos).slice(0, 5)).join(', ')}).`;
-    const firma = r.archivos.map(a => a.id).sort().join(',') + '|' + semana.length;
-    cruzarYGuardar(r.archivos.map(a => a.texto), semana, claveFirma, firma === r.firma_guardada ? null : firma);
+    const porMail = r.archivos.filter(a => !a.manual), aMano = r.archivos.filter(a => a.manual);
+    const textos = [];
+    if (porMail.length) textos.push(`por mail ${porMail.length} ${porMail.length === 1 ? 'día' : 'días'} (${porMail.map(a => fmtFecha(a.fecha_datos).slice(0, 5)).join(', ')})`);
+    if (aMano.length) textos.push(`subidos a mano: ${aMano.map(a => a.nombre).join(', ')}`);
+    origenTxt.textContent = 'Salientes del mes: ' + textos.join(' · ') + '.';
+    const firma = r.archivos.map(a => a.id).sort().join(',') + '|' + gestiones.length;
+    cruzarYGuardar(r.archivos.map(a => a.texto), gestiones, claveFirma, firma === r.firma_guardada ? null : firma);
   }
 
-  /** Cruza y guarda el resultado. Si viene del mail y ya estaba guardado igual (firma null), no lo repite. */
-  async function cruzarYGuardar(textos, semana, claveFirma, firma) {
+  /** Cruza y guarda el resultado. Si ya estaba guardado igual (firma null), no lo repite. */
+  async function cruzarYGuardar(textos, gestiones, claveFirma, firma) {
     const salida = vista.querySelector('#c-cruce-resultado');
     let llamadas;
     try {
@@ -268,9 +294,8 @@ Modulos.Campanias = (() => {
       aviso(e.message, 'error');
       return;
     }
-    const desde = inicioSemana(datos);
-    const hasta = (() => { const d = new Date(); return hoyISO() + ' ' + d.toTimeString().slice(0, 8); })();
-    const cruce = L.cruzar(semana, llamadas, desde, hasta);
+    const { desde, hasta } = periodoDelMes(datos.mes);
+    const cruce = L.cruzar(gestiones, llamadas, desde, hasta);
     pintarResultadoCruce(salida, cruce);
 
     if (!cruce.detalle.length || (claveFirma && !firma)) return;
@@ -289,7 +314,7 @@ Modulos.Campanias = (() => {
   }
 
   function pintarResultadoCruce(salida, cruce) {
-    if (!cruce.agentes.length) { salida.innerHTML = vacioHtml('No hay gestiones en la semana para cruzar.'); return; }
+    if (!cruce.agentes.length) { salida.innerHTML = vacioHtml('No hay gestiones en el mes para cruzar.'); return; }
     salida.innerHTML = `
       <div class="tabla-envoltura"><table class="tabla">
         <thead><tr><th>Agente</th><th class="num">Gestiones marcadas</th><th class="num">Con llamada</th>
