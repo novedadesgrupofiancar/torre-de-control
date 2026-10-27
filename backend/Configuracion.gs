@@ -31,7 +31,11 @@ function configInicial_() {
     // Links que aparecen en el menú lateral
     enlaces: { miro: '' },
     // Datos para verificar la clave de Credenciales (sal y texto de control cifrado; la clave no se guarda)
-    boveda: { sal: '', iv: '', verificador: '' }
+    boveda: { sal: '', iv: '', verificador: '' },
+    // Horario de atención de redes y WhatsApp (no confundir con los horarios de los agentes). Días: 0 domingo … 6 sábado
+    atencion: { dias: [1, 2, 3, 4, 5], desde: '10:00', hasta: '19:00' },
+    // Fechas que no cuentan como días hábiles (aaaa-mm-dd)
+    feriados: []
   };
 }
 
@@ -58,7 +62,9 @@ function guardarConfiguracion(clave, valor) {
     palabras_clave: v => normalizarListas_(v, Object.keys(configInicial_().palabras_clave)),
     destinatarios: normalizarDestinatarios_,
     enlaces: normalizarEnlaces_,
-    boveda: normalizarBoveda_
+    boveda: normalizarBoveda_,
+    atencion: normalizarAtencion_,
+    feriados: normalizarFeriados_
   };
   if (!normalizadores[clave]) throw new Error('Bloque de configuración desconocido.');
   const limpio = normalizadores[clave](valor);
@@ -142,6 +148,21 @@ function normalizarListas_(obj, claves) {
     });
   });
   return limpio;
+}
+
+function normalizarAtencion_(obj) {
+  obj = obj || {};
+  const dias = (obj.dias || []).map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6);
+  if (!dias.length) throw new Error('Elegí al menos un día de atención.');
+  const desde = horaHHMM_(obj.desde, 'apertura');
+  const hasta = horaHHMM_(obj.hasta, 'cierre');
+  if (hasta <= desde) throw new Error('El cierre tiene que ser después de la apertura.');
+  return { dias: dias.filter((d, i) => dias.indexOf(d) === i).sort(), desde: desde, hasta: hasta };
+}
+
+function normalizarFeriados_(lista) {
+  if (!Array.isArray(lista)) throw new Error('Formato de feriados inválido.');
+  return lista.map(f => fechaISO_(f, 'feriado')).filter((f, i, t) => t.indexOf(f) === i).sort();
 }
 
 function normalizarEnlaces_(obj) {

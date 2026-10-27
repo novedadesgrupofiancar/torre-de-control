@@ -8,18 +8,19 @@ const NOMBRE_PLANILLA = 'Torre de control – Base';
 const NOMBRE_CARPETA_CAPTURAS = 'Torre de control – Capturas';
 const HOJA_CONFIG = 'configuración';
 // Subir este número si se agregan hojas nuevas, para que se creen en la próxima llamada
-const VERSION_BASE = '6';
+const VERSION_BASE = '7';
 
 // Encabezados de cada hoja (el orden es el de las columnas)
 const HOJAS = {
   'asistencia': ['id', 'registrado_en', 'agente', 'evento', 'motivo', 'tipo_ho', 'hora_llegada', 'desde', 'hasta', 'comentario'],
   'issues': ['id', 'registrado_en', 'fecha', 'issue', 'detalles'],
   'comentarios_issues': ['id', 'issue_id', 'registrado_en', 'comentario', 'estado', 'escalado_a'],
-  'redes': ['id', 'registrado_en', 'monitoreo_id', 'turno', 'red', 'sin_responder', 'fecha_mensajes'],
+  // Columnas agregadas en la etapa 4 (al final, para no mover las existentes): cantidad_sin_responder, muestra_mensaje, muestra_respuesta
+  'redes': ['id', 'registrado_en', 'monitoreo_id', 'turno', 'red', 'sin_responder', 'fecha_mensajes', 'cantidad_sin_responder', 'muestra_mensaje', 'muestra_respuesta'],
   'agendas_web': ['id', 'registrado_en', 'fecha', 'hora', 'taller', 'comentario', 'se_llamo', 'historial_llamado'],
   'bitacora_taller': ['id', 'registrado_en', 'comentario'],
   'capturas': ['id', 'registrado_en', 'seccion', 'nombre', 'link', 'archivo_id'],
-  'whatsapp': ['id', 'registrado_en', 'linea', 'horario', 'comentario'],
+  'whatsapp': ['id', 'registrado_en', 'linea', 'horario', 'comentario', 'cantidad_sin_responder', 'fecha_mensajes', 'muestra_mensaje', 'muestra_respuesta'],
   'check_diario': ['id', 'registrado_en', 'fecha'],
   'fotos_campañas': ['id', 'registrado_en', 'foto_id', 'fecha_foto', 'mes', 'origen', 'hoja', 'km', 'agente', 'clave', 'oportunidad'],
   'llamadas': ['id', 'registrado_en', 'carga_id', 'desde', 'hasta', 'semana', 'agente', 'interno', 'pct_atendidas', 'atendidas', 'ofrecidas', 'detalle_colas', 'desconexiones', 'minutos_desconectado', 'sesiones_sin_cerrar', 'resumen'],
@@ -39,7 +40,7 @@ function inicializarBase_() {
   lock.waitLock(30000);
   try {
     const ss = obtenerPlanilla_();
-    Object.keys(HOJAS).forEach(nombre => obtenerHoja_(nombre, ss));
+    Object.keys(HOJAS).forEach(nombre => asegurarColumnas_(obtenerHoja_(nombre, ss), HOJAS[nombre]));
     // Borra la hoja vacía que trae toda planilla nueva
     ss.getSheets().forEach(hoja => {
       if (!HOJAS[hoja.getName()] && hoja.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(hoja);
@@ -91,6 +92,18 @@ function obtenerHoja_(nombre, ss) {
     hoja.setFrozenRows(1);
   }
   return hoja;
+}
+
+/** Agrega al final las columnas que falten en una hoja existente (no mueve ni renombra las que ya están) */
+function asegurarColumnas_(hoja, encabezados) {
+  const actuales = hoja.getRange(1, 1, 1, Math.max(hoja.getLastColumn(), 1)).getValues()[0].map(String);
+  const faltan = encabezados.filter(c => actuales.indexOf(c) < 0);
+  if (!faltan.length) return;
+  const desde = hoja.getLastColumn() + 1;
+  const sobran = desde + faltan.length - 1 - hoja.getMaxColumns();
+  if (sobran > 0) hoja.insertColumnsAfter(hoja.getMaxColumns(), sobran);
+  hoja.getRange(1, desde, hoja.getMaxRows(), faltan.length).setNumberFormat('@');
+  hoja.getRange(1, desde, 1, faltan.length).setValues([faltan]).setFontWeight('bold');
 }
 
 /** Lee todas las filas de una hoja como objetos {columna: texto} */
@@ -216,6 +229,13 @@ function fechaISO_(v, campo) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new Error('Falta o es inválida la fecha: ' + campo + '.');
   return v;
 }
+/** "aaaa-mm-ddThh:mm" o "aaaa-mm-dd hh:mm" → "aaaa-mm-dd hh:mm" */
+function fechaHora_(v, campo) {
+  v = texto_(v, 19).replace('T', ' ').slice(0, 16);
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(v)) throw new Error('Falta o es inválida la fecha y hora: ' + campo + '.');
+  return v;
+}
+
 function horaHHMM_(v, campo) {
   v = texto_(v, 5);
   if (!/^\d{2}:\d{2}$/.test(v)) throw new Error('Falta o es inválida la hora: ' + campo + '.');

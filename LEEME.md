@@ -29,6 +29,7 @@ torre-de-control/
 │   ├── config.js              URL de la API (web app de Apps Script)
 │   ├── nucleo.js              ingreso con clave, llamadas a la API, menú, utilidades
 │   ├── xlsx.js                genera archivos .xlsx en el navegador (sin librerías)
+│   ├── tiempo-habil.js        única función de tiempo hábil (horario de atención y feriados)
 │   └── secciones/             una vista por sección: llamadas (+ llamadas-logica), campanias
 │                              (+ campanias-logica), asistencia, issues, redes, taller, whatsapp,
 │                              recordatorios, reportes (+ jimena-logica), configuracion
@@ -95,6 +96,14 @@ No conviene editar ni reordenar columnas a mano en la planilla.
 - Reportes › Resumen para Jimena: semana de lunes a viernes que incluye la fecha elegida. Botón para copiar el texto.
 - Llamadas: la última carga de 3CX cuyo período toca la semana. Campañas: reporte semanal contra la última foto. Asistencia, issues (solo comentarios del período), redes y taller de la semana. No incluye WhatsApp.
 - Texto armado con reglas fijas (`js/secciones/jimena-logica.js`); los comentarios van textuales.
+
+## Secciones 5 y 7 – Métricas de respuesta (Redes y WhatsApp)
+
+- En cada monitoreo, por página (Redes) o por línea (WhatsApp): cantidad sin responder (0 si no hay), fecha y hora del más viejo (solo si hay) y una muestra opcional (mensaje del cliente y primera respuesta; en Bot, la del agente humano).
+- Columnas agregadas al final de las hojas `redes` y `whatsapp`: `cantidad_sin_responder`, `muestra_mensaje`, `muestra_respuesta` (y `fecha_mensajes` en WhatsApp). En Redes, `fecha_mensajes` ahora guarda fecha y hora; `sin_responder` (Sí/No) se completa sola a partir de la cantidad. Los registros viejos quedan tal cual y fuera del cálculo de antigüedad.
+- Tiempo hábil (`js/tiempo-habil.js`): solo minutos dentro del horario de atención (Configuración › Horario de atención de redes y WhatsApp), sin feriados. Fuera de horario, el reloj arranca en la siguiente apertura.
+- Bloque "Métricas" en cada sección (`js/secciones/metricas-respuesta.js` y `metricas-vista.js`): respuesta promedio y muestras, pendientes (promedio y máximo), antigüedad máxima y resumen, por día, semana o rango. El resumen para Jimena incluye las de Redes.
+- Momento del monitoreo: en Redes, cuándo se guardó; en WhatsApp, la fecha del registro con el horario cargado.
 
 ## Sección 2 – Campañas
 

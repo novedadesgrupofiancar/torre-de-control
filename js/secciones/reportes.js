@@ -68,7 +68,8 @@ Modulos.Reportes = (() => {
           mes ? Modulos.Campanias.reporteSemanal(mes).catch(err => ({ error: 'No se pudieron leer las planillas: ' + err.message }))
             : Promise.resolve({ error: 'No hay links de campañas cargados.' })
         ]);
-        textoJimena = JimenaLogica.armar(datos, campanias);
+        textoJimena = JimenaLogica.armar(datos, campanias,
+          { atencion: Estado.config.atencion, feriados: Estado.config.feriados, redes: Estado.config.listas.redes });
       }, 'Generando…');
       if (!ok) { salida.hidden = true; return; }
       salida.textContent = textoJimena;

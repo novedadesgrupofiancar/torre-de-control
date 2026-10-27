@@ -55,7 +55,7 @@ const JimenaLogica = (() => {
     return l;
   }
 
-  function redes(monitoreos) {
+  function redes(monitoreos, opciones) {
     if (!monitoreos.length) return ['Sin monitoreos cargados.'];
     const l = [`- ${plural(monitoreos.length, 'monitoreo cargado', 'monitoreos cargados')}.`];
     const conPendientes = [];
@@ -64,6 +64,13 @@ const JimenaLogica = (() => {
       if (r.sin_responder === 'Sí') conPendientes.push(`${red} (monitoreo ${m.turno} del ${fecha(m.registrado_en)}: mensajes del ${fecha(r.fecha_mensajes)})`);
     }));
     l.push(conPendientes.length ? '- Con mensajes sin responder: ' + conPendientes.join('; ') + '.' : '- Sin mensajes sin responder.');
+    // Métricas de tiempo de respuesta por página (tiempo hábil)
+    if (opciones && opciones.atencion) {
+      const MR = typeof MetricasRespuesta !== 'undefined' ? MetricasRespuesta : require('./metricas-respuesta.js');
+      l.push('- Métricas por página:');
+      MR.calcular(MR.observacionesDeRedes(monitoreos), opciones.redes || [], opciones.atencion, opciones.feriados || [])
+        .forEach(m => l.push('  ' + m.resumen));
+    }
     return l;
   }
 
@@ -83,8 +90,11 @@ const JimenaLogica = (() => {
     return l;
   }
 
-  /** datos: respuesta de datosResumenJimena; reporteCampanias: el reporte semanal de campañas (o {error}) */
-  function armar(datos, reporteCampanias) {
+  /**
+   * datos: respuesta de datosResumenJimena; reporteCampanias: el reporte semanal de campañas (o {error});
+   * opciones: { atencion, feriados, redes } de Configuración, para las métricas de Redes
+   */
+  function armar(datos, reporteCampanias, opciones) {
     const bloque = (titulo, lineas) => [titulo.toUpperCase(), ...lineas, ''].join('\n');
     return [
       `Resumen semanal – del ${fecha(datos.desde)} al ${fecha(datos.hasta)}`,
@@ -93,7 +103,7 @@ const JimenaLogica = (() => {
       bloque('Campañas', campanias(reporteCampanias)),
       bloque('Asistencia', asistencia(datos.asistencia)),
       bloque('Issues', issues(datos.issues)),
-      bloque('Redes', redes(datos.redes)),
+      bloque('Redes', redes(datos.redes, opciones)),
       bloque('Taller', taller(datos.taller))
     ].join('\n').trim();
   }

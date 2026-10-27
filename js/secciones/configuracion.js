@@ -28,6 +28,7 @@ Modulos.Configuracion = (() => {
         <div class="bloque-interno separado" id="b-palabras"></div>
       </section>
       <section class="tarjeta" id="b-destinatarios"></section>
+      <section class="tarjeta" id="b-atencion"></section>
       <section class="tarjeta" id="b-enlaces"></section>`;
     pintarTodo();
   }
@@ -42,6 +43,68 @@ Modulos.Configuracion = (() => {
     pintarListas('b-palabras', 'palabras_clave', 'Palabras clave de No aplica', 'Se usan en Campañas para clasificar los "No aplica" por el comentario del agente, en este orden (gana la primera que coincide), sin distinguir mayúsculas ni acentos. Un comentario con formato de orden de taller (dd/mm/aaaa | número | NN K) cuenta como "ya vino".', PALABRAS);
     pintarDestinatarios();
     pintarEnlaces();
+    pintarAtencion();
+  }
+
+  /* ---------- Horario de atención de redes y WhatsApp, y feriados ---------- */
+
+  function pintarAtencion() {
+    const b = vista.querySelector('#b-atencion');
+    const a = Estado.config.atencion;
+    const feriados = Estado.config.feriados.slice();
+    const DIAS_SEMANA = [[1, 'Lun'], [2, 'Mar'], [3, 'Mié'], [4, 'Jue'], [5, 'Vie'], [6, 'Sáb'], [0, 'Dom']];
+    b.innerHTML = `
+      <div><h2>Horario de atención de redes y WhatsApp</h2>
+        <p class="nota">Se usa para calcular los tiempos de respuesta en tiempo hábil. No es el horario de los agentes.</p></div>
+      <form class="form" id="f-atencion" autocomplete="off">
+        <div class="pildoras">${DIAS_SEMANA.map(([n, nombre]) => `<label class="chip" style="padding-right:12px">
+          <input type="checkbox" name="dia" value="${n}" ${a.dias.includes(n) ? 'checked' : ''}> ${nombre}</label>`).join('')}</div>
+        <div class="grid-campos">
+          ${campo('Apertura', `<input type="time" name="desde" required value="${esc(a.desde)}">`)}
+          ${campo('Cierre', `<input type="time" name="hasta" required value="${esc(a.hasta)}">`)}
+        </div>
+        <div class="acciones"><button type="submit" class="btn btn-primario">Guardar horario de atención</button></div>
+      </form>
+      <div class="bloque-interno separado">
+        <div><h2>Feriados</h2><p class="nota">Fechas que no cuentan como días hábiles.</p></div>
+        <div class="pildoras" id="lista-feriados"></div>
+        <form class="acciones" style="justify-content:flex-start" id="f-feriado">
+          <input type="date" name="fecha" required aria-label="Fecha del feriado" style="max-width:200px">
+          <button type="submit" class="btn btn-sec">Agregar</button>
+          <div class="crece"></div>
+          <button type="button" class="btn btn-primario" id="guardar-feriados">Guardar feriados</button>
+        </form>
+      </div>`;
+
+    const pintarFeriados = () => {
+      b.querySelector('#lista-feriados').innerHTML = feriados.length
+        ? feriados.map((f, i) => `<span class="chip"><span class="mono">${fmtFecha(f)}</span><button type="button" data-quitar="${i}" aria-label="Quitar ${fmtFecha(f)}">×</button></span>`).join('')
+        : '<span class="nota">Sin feriados cargados.</span>';
+    };
+    b.querySelector('#lista-feriados').addEventListener('click', e => {
+      const q = e.target.closest('[data-quitar]');
+      if (!q) return;
+      feriados.splice(Number(q.dataset.quitar), 1);
+      pintarFeriados();
+    });
+    b.querySelector('#f-feriado').addEventListener('submit', e => {
+      e.preventDefault();
+      const f = e.target.fecha.value;
+      if (!f) return;
+      if (feriados.includes(f)) { aviso('Esa fecha ya está.', 'error'); return; }
+      feriados.push(f);
+      feriados.sort();
+      e.target.fecha.value = '';
+      pintarFeriados();
+    });
+    b.querySelector('#guardar-feriados').addEventListener('click', e => guardar(e.currentTarget, 'feriados', feriados));
+    const form = b.querySelector('#f-atencion');
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const dias = [...form.querySelectorAll('[name=dia]:checked')].map(c => Number(c.value));
+      guardar(form.querySelector('[type=submit]'), 'atencion', { dias, desde: form.desde.value, hasta: form.hasta.value });
+    });
+    pintarFeriados();
   }
 
   /* ---------- Links del menú ---------- */
