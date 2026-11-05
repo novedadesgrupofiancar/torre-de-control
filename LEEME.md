@@ -83,6 +83,19 @@ Las acciones disponibles están en `ACCIONES`, al principio de `backend/Api.gs`.
 Todo registro guarda fecha y hora automática (`registrado_en`) y se agrega al final: no se sobrescribe nada.
 No conviene editar ni reordenar columnas a mano en la planilla.
 
+### Editar y eliminar registros
+
+En Marcas y asistencia, Redes (el monitoreo completo), Taller (agendas web y comentarios libres) y Control de WhatsApp
+cada registro del historial tiene **Editar** y **Eliminar**. No se borra ninguna fila:
+
+- Las hojas `asistencia`, `redes`, `agendas_web`, `bitacora_taller` y `whatsapp` tienen al final tres columnas:
+  `reemplaza_a`, `estado_registro` y `modificado_en`.
+- **Editar**: la fila anterior queda con `estado_registro` = Reemplazado y la fecha en `modificado_en`; la corregida se agrega
+  al final con `reemplaza_a` = id de la anterior y la misma `registrado_en` (en Redes y WhatsApp es el momento del monitoreo
+  que usan las métricas). En Redes se conserva el `monitoreo_id`; en agendas web pasan el "¿Se llamó?" y su historial.
+- **Eliminar**: la fila queda con `estado_registro` = Eliminado y la fecha.
+- El panel, los reportes y el resumen para Jimena solo usan las filas con `estado_registro` vacío.
+
 ## Sección 1 – Llamadas y conexión
 
 - Se cargan los 2 CSV de 3CX (% de llamadas atendidas e historial de conexión), de un día, una semana o un mes. Se procesan en el navegador y se guarda el resultado en la hoja `llamadas`.

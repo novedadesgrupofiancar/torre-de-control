@@ -7,6 +7,19 @@ const EVENTOS_ASISTENCIA = ['Falta', 'Llegada tarde', 'Se retira antes', 'Recupe
 const TIPOS_HO = ['Excepción', 'Premio', 'Otro'];
 
 function registrarAsistencia(d) {
+  const fila = Object.assign({ id: nuevoId_(), registrado_en: ahora_() }, camposAsistencia_(d));
+  agregarFilas_('asistencia', [fila]);
+  return fila;
+}
+
+/** Guarda la versión corregida (con la fecha de registro original) y marca la anterior como reemplazada */
+function editarAsistencia(d) {
+  const campos = camposAsistencia_(d);
+  return reemplazarRegistros_('asistencia', 'id', texto_(d.id, 60), 'Reemplazado', anteriores =>
+    [Object.assign({ id: nuevoId_(), registrado_en: anteriores[0].registrado_en, reemplaza_a: anteriores[0].id }, campos)])[0];
+}
+
+function camposAsistencia_(d) {
   const conf = obtenerConfiguracion();
   const agente = requerido_(texto_(d.agente, 100), 'agente');
   if (!conf.agentes.some(a => a.nombre === agente)) throw new Error('El agente no está cargado en Configuración.');
@@ -17,9 +30,7 @@ function registrarAsistencia(d) {
   const motivo = texto_(d.motivo, 200);
   if (motivo && conf.listas.motivos.indexOf(motivo) < 0) throw new Error('El motivo no está en la lista.');
 
-  const fila = {
-    id: nuevoId_(),
-    registrado_en: ahora_(),
+  return {
     agente: agente,
     evento: evento,
     motivo: motivo,
@@ -29,8 +40,6 @@ function registrarAsistencia(d) {
     hasta: hasta,
     comentario: texto_(d.comentario)
   };
-  agregarFilas_('asistencia', [fila]);
-  return fila;
 }
 
 /** Todos los registros, del más reciente al más viejo */

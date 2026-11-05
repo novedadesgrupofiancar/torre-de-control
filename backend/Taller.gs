@@ -5,19 +5,27 @@
 /* ---------- Agendas web ---------- */
 
 function registrarAgendaWeb(d) {
+  const fila = Object.assign({ id: nuevoId_(), registrado_en: ahora_() }, camposAgendaWeb_(d), { se_llamo: 'No', historial_llamado: '' });
+  agregarFilas_('agendas_web', [fila]);
+  return fila;
+}
+
+/** Corrige fecha, hora, taller o comentario; el "¿Se llamó?" y su historial pasan a la versión nueva */
+function editarAgendaWeb(d) {
+  const campos = camposAgendaWeb_(d);
+  return reemplazarRegistros_('agendas_web', 'id', texto_(d.id, 60), 'Reemplazado', anteriores =>
+    [Object.assign({ id: nuevoId_(), registrado_en: anteriores[0].registrado_en, reemplaza_a: anteriores[0].id }, campos,
+      { se_llamo: anteriores[0].se_llamo, historial_llamado: anteriores[0].historial_llamado })])[0];
+}
+
+function camposAgendaWeb_(d) {
   const conf = obtenerConfiguracion();
-  const fila = {
-    id: nuevoId_(),
-    registrado_en: ahora_(),
+  return {
     fecha: fechaISO_(d.fecha, 'fecha'),
     hora: horaHHMM_(d.hora, 'hora'),
     taller: enLista_(d.taller, conf.listas.talleres, 'taller'),
-    comentario: texto_(d.comentario),
-    se_llamo: 'No',
-    historial_llamado: ''
+    comentario: texto_(d.comentario)
   };
-  agregarFilas_('agendas_web', [fila]);
-  return fila;
 }
 
 /** Marca o desmarca "¿Se llamó?" y deja anotado cada cambio con fecha y hora */
@@ -39,6 +47,12 @@ function registrarBitacora(d) {
   const fila = { id: nuevoId_(), registrado_en: ahora_(), comentario: requerido_(texto_(d.comentario), 'comentario') };
   agregarFilas_('bitacora_taller', [fila]);
   return fila;
+}
+
+function editarBitacora(d) {
+  const comentario = requerido_(texto_(d.comentario), 'comentario');
+  return reemplazarRegistros_('bitacora_taller', 'id', texto_(d.id, 60), 'Reemplazado', anteriores =>
+    [{ id: nuevoId_(), registrado_en: anteriores[0].registrado_en, comentario: comentario, reemplaza_a: anteriores[0].id }])[0];
 }
 
 function listarBitacora() {

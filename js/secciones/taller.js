@@ -3,9 +3,12 @@ Modulos.Taller = (() => {
   const BITACORA_POR_PAGINA = 30;
   let vista, agendas = [], bitacora = [], capturas = [], bitacoraVisible = BITACORA_POR_PAGINA;
   const imagenes = {}; // caché de capturas ya descargadas (archivo_id → data URL)
+  // Agenda y comentario que se están corrigiendo (null = carga nueva)
+  let agendaEditando = null, comentarioEditando = null;
 
   async function render(v, s) {
     vista = v;
+    agendaEditando = comentarioEditando = null;
     [agendas, bitacora, capturas] = await Promise.all([
       api('listarAgendasWeb'), api('listarBitacora'), api('listarCapturas', { seccion: 'Taller' })
     ]);
@@ -27,7 +30,11 @@ Modulos.Taller = (() => {
             ${campo('Taller', `<select name="taller" required>${opcionesHtml(talleres, '', 'Elegí el taller')}</select>`)}
             ${campo('Comentario', '<input name="comentario">', 'ancho-2')}
           </div>
-          <div class="acciones"><button class="btn btn-primario" type="submit">Agregar agenda</button></div>
+          <div class="acciones">
+            <p class="nota crece" id="agenda-editando" hidden></p>
+            <button class="btn btn-sec" type="button" id="agenda-cancelar" hidden>Cancelar</button>
+            <button class="btn btn-primario" type="submit">Agregar agenda</button>
+          </div>
         </form>
         <div class="titulo-bloque">
           <div style="min-width:200px">${campo('Ver agendas del', `<input type="date" id="filtro-agendas" value="${manana}">`)}</div>
@@ -40,7 +47,11 @@ Modulos.Taller = (() => {
           <h2>Comentarios libres</h2>
           <form id="f-bitacora" class="form">
             ${campo('Comentario', '<textarea name="comentario" rows="3" required></textarea>')}
-            <div class="acciones"><button class="btn btn-primario" type="submit">Guardar comentario</button></div>
+            <div class="acciones">
+              <p class="nota crece" id="bitacora-editando" hidden></p>
+              <button class="btn btn-sec" type="button" id="bitacora-cancelar" hidden>Cancelar</button>
+              <button class="btn btn-primario" type="submit">Guardar comentario</button>
+            </div>
           </form>
           <div id="lista-bitacora"></div>
         </section>
@@ -60,16 +71,42 @@ Modulos.Taller = (() => {
       e.preventDefault();
       const datos = leerForm(fAgenda);
       const ok = await conBoton(fAgenda.querySelector('[type=submit]'), async () => {
-        await api('registrarAgendaWeb', datos);
+        if (agendaEditando) await api('editarAgendaWeb', Object.assign(datos, { id: agendaEditando.id }));
+        else await api('registrarAgendaWeb', datos);
         agendas = await api('listarAgendasWeb');
       });
       if (!ok) return;
-      aviso('Agenda agregada.');
+      aviso(agendaEditando ? 'Agenda corregida.' : 'Agenda agregada.');
       v.querySelector('#filtro-agendas').value = datos.fecha;
-      fAgenda.hora.value = '';
-      fAgenda.comentario.value = '';
-      pintarAgendas();
+      editarAgenda(null);
     });
+    v.querySelector('#agenda-cancelar').addEventListener('click', () => editarAgenda(null));
+    v.querySelector('#lista-agendas').addEventListener('click', async e => {
+      const b = e.target.closest('[data-editar], [data-eliminar]');
+      if (!b) return;
+      const a = agendas.find(x => x.id === (b.dataset.editar || b.dataset.eliminar));
+      if (b.dataset.editar) { editarAgenda(a); return; }
+      const ok = await eliminarRegistro('agenda_web', a.id, b, `la agenda de ${a.taller} del ${fmtFecha(a.fecha)} a las ${a.hora}`);
+      if (!ok) return;
+      agendas = agendas.filter(x => x.id !== a.id);
+      aviso('Agenda eliminada.');
+      if (agendaEditando && agendaEditando.id === a.id) editarAgenda(null);
+      else pintarAgendas();
+    });
+
+    /** Carga una agenda en el formulario para corregirla (null = vuelve a "Agregar agenda") */
+    function editarAgenda(a) {
+      agendaEditando = a;
+      if (a) ['fecha', 'hora', 'taller', 'comentario'].forEach(n => { fAgenda[n].value = a[n] || ''; });
+      else { fAgenda.hora.value = ''; fAgenda.comentario.value = ''; }
+      const nota = v.querySelector('#agenda-editando');
+      nota.hidden = !a;
+      nota.textContent = a ? `Editando la agenda de ${a.taller} del ${fmtFecha(a.fecha)} a las ${a.hora}.` : '';
+      fAgenda.querySelector('[type=submit]').textContent = a ? 'Guardar cambios' : 'Agregar agenda';
+      v.querySelector('#agenda-cancelar').hidden = !a;
+      if (a) fAgenda.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      pintarAgendas();
+    }
     v.querySelector('#filtro-agendas').addEventListener('change', pintarAgendas);
     v.querySelector('#lista-agendas').addEventListener('change', async e => {
       const check = e.target.closest('input[data-id]');
@@ -92,19 +129,45 @@ Modulos.Taller = (() => {
       e.preventDefault();
       const datos = leerForm(fBitacora);
       const ok = await conBoton(fBitacora.querySelector('[type=submit]'), async () => {
-        await api('registrarBitacora', datos);
+        if (comentarioEditando) await api('editarBitacora', Object.assign(datos, { id: comentarioEditando.id }));
+        else await api('registrarBitacora', datos);
         bitacora = await api('listarBitacora');
       });
       if (!ok) return;
-      aviso('Comentario guardado.');
-      fBitacora.reset();
-      pintarBitacora();
+      aviso(comentarioEditando ? 'Comentario corregido.' : 'Comentario guardado.');
+      editarComentario(null);
     });
-    v.querySelector('#lista-bitacora').addEventListener('click', e => {
-      if (!e.target.closest('#ver-mas-bitacora')) return;
-      bitacoraVisible += BITACORA_POR_PAGINA;
-      pintarBitacora();
+    v.querySelector('#bitacora-cancelar').addEventListener('click', () => editarComentario(null));
+    v.querySelector('#lista-bitacora').addEventListener('click', async e => {
+      if (e.target.closest('#ver-mas-bitacora')) {
+        bitacoraVisible += BITACORA_POR_PAGINA;
+        pintarBitacora();
+        return;
+      }
+      const b = e.target.closest('[data-editar], [data-eliminar]');
+      if (!b) return;
+      const c = bitacora.find(x => x.id === (b.dataset.editar || b.dataset.eliminar));
+      if (b.dataset.editar) { editarComentario(c); return; }
+      const ok = await eliminarRegistro('bitacora_taller', c.id, b, `el comentario del ${fmtFechaHora(c.registrado_en)}`);
+      if (!ok) return;
+      bitacora = bitacora.filter(x => x.id !== c.id);
+      aviso('Comentario eliminado.');
+      if (comentarioEditando && comentarioEditando.id === c.id) editarComentario(null);
+      else pintarBitacora();
     });
+
+    /** Carga un comentario en el formulario para corregirlo (null = vuelve a "Guardar comentario") */
+    function editarComentario(c) {
+      comentarioEditando = c;
+      fBitacora.comentario.value = c ? c.comentario : '';
+      const nota = v.querySelector('#bitacora-editando');
+      nota.hidden = !c;
+      nota.textContent = c ? `Editando el comentario del ${fmtFechaHora(c.registrado_en)}.` : '';
+      fBitacora.querySelector('[type=submit]').textContent = c ? 'Guardar cambios' : 'Guardar comentario';
+      v.querySelector('#bitacora-cancelar').hidden = !c;
+      if (c) { fBitacora.scrollIntoView({ behavior: 'smooth', block: 'start' }); fBitacora.comentario.focus(); }
+      pintarBitacora();
+    }
 
     // Capturas: se escucha el pegado mientras la sección está abierta
     document.addEventListener('paste', alPegar);
@@ -134,6 +197,7 @@ Modulos.Taller = (() => {
           <strong>${esc(a.taller)}</strong>
           ${a.comentario ? `<p class="texto-libre">${esc(a.comentario)}</p>` : ''}
           ${a.se_llamo === 'Sí' && ultimoCambio ? `<p class="nota mono">Llamado ${fmtFechaHora(ultimoCambio.slice(0, 19))}</p>` : ''}
+          ${botonesRegistro(a.id)}
         </div>
         <label><input type="checkbox" data-id="${esc(a.id)}" ${a.se_llamo === 'Sí' ? 'checked' : ''}> ¿Se llamó?</label>
       </div>`;
@@ -146,6 +210,7 @@ Modulos.Taller = (() => {
       <div>${visibles.map(b => `<div class="entrada-bitacora">
         <span class="mono nota">${fmtFechaHora(b.registrado_en)}</span>
         <p class="texto-libre">${esc(b.comentario)}</p>
+        ${botonesRegistro(b.id)}
       </div>`).join('')}</div>
       ${bitacora.length > visibles.length ? '<button type="button" class="btn btn-sec" id="ver-mas-bitacora">Ver más</button>' : ''}`
       : vacioHtml('Todavía no hay comentarios.');

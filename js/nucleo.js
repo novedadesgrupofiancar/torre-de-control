@@ -260,6 +260,25 @@ async function conBoton(boton, accion, textoEspera) {
   }
 }
 
+/** Botones Editar y Eliminar de un registro del historial */
+function botonesRegistro(id) {
+  return `<div class="botones-registro">
+    <button type="button" class="btn btn-sec btn-chico" data-editar="${esc(id)}">Editar</button>
+    <button type="button" class="btn btn-sec btn-chico" data-eliminar="${esc(id)}">Eliminar</button>
+  </div>`;
+}
+
+/** Pide confirmación y elimina el registro (en la base queda marcado como eliminado, no se borra) */
+async function eliminarRegistro(tipo, id, boton, descripcion) {
+  if (!confirm(`¿Eliminar ${descripcion}?`)) return false;
+  return conBoton(boton, () => api('eliminarRegistro', { tipo, id }), 'Eliminando…');
+}
+
+/** 'aaaa-mm-dd hh:mm' de la base → valor de un input datetime-local (vacío si no tiene hora) */
+function aFechaHoraLocal(v) {
+  return v && v.length >= 16 ? v.slice(0, 16).replace(' ', 'T') : '';
+}
+
 function leerForm(form) {
   const datos = {};
   new FormData(form).forEach((v, k) => { datos[k] = typeof v === 'string' ? v.trim() : v; });

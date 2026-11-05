@@ -2,16 +2,18 @@
 Modulos.WhatsApp = (() => {
   const M = MetricasRespuesta;
   let vista, controles = [], metricas = null;
+  let editando = null; // control que se está corrigiendo (null = control nuevo)
 
   async function render(v, s) {
     vista = v;
+    editando = null;
     controles = await api('listarControlesWhatsApp');
     const lineas = Estado.config.listas.lineas_whatsapp;
     const lineasHistorial = [...new Set(lineas.concat(controles.map(c => c.linea)))];
 
     v.innerHTML = encabezado(s) + `
       <section class="tarjeta">
-        <h2>Nuevo control</h2>
+        <h2 id="wa-titulo-form">Nuevo control</h2>
         <form id="f-whatsapp" class="form" autocomplete="off">
           <div class="grid-campos">
             ${campo('WhatsApp controlado', `<select name="linea" required>${opcionesHtml(lineas, '', 'Elegí la línea')}</select>`)}
@@ -25,7 +27,10 @@ Modulos.WhatsApp = (() => {
           </div>
           <p class="nota" id="wa-nota-muestra">Muestra (opcional): la última conversación respondida de la línea.</p>
           ${campo('Comentarios', '<textarea name="comentario" rows="3"></textarea>')}
-          <div class="acciones"><button class="btn btn-primario" type="submit">Guardar control</button></div>
+          <div class="acciones">
+            <button class="btn btn-sec" type="button" id="wa-cancelar" hidden>Cancelar</button>
+            <button class="btn btn-primario" type="submit">Guardar control</button>
+          </div>
         </form>
       </section>
       <section class="tarjeta" id="wa-metricas"></section>
@@ -60,18 +65,46 @@ Modulos.WhatsApp = (() => {
         return;
       }
       const ok = await conBoton(form.querySelector('[type=submit]'), async () => {
-        await api('registrarControlWhatsApp', datos);
+        if (editando) await api('editarControlWhatsApp', Object.assign(datos, { id: editando.id }));
+        else await api('registrarControlWhatsApp', datos);
         controles = await api('listarControlesWhatsApp');
       });
       if (!ok) return;
-      aviso('Control guardado.');
+      aviso(editando ? 'Control corregido.' : 'Control guardado.');
+      editar(null);
+    });
+    v.querySelector('#wa-cancelar').addEventListener('click', () => editar(null));
+    v.querySelector('#filtros-whatsapp').addEventListener('input', pintar);
+    v.querySelector('#tabla-whatsapp').addEventListener('click', async e => {
+      const b = e.target.closest('[data-editar], [data-eliminar]');
+      if (!b) return;
+      const c = controles.find(x => x.id === (b.dataset.editar || b.dataset.eliminar));
+      if (b.dataset.editar) { editar(c); return; }
+      const ok = await eliminarRegistro('whatsapp', c.id, b, `el control de ${c.linea} del ${fmtFecha(c.registrado_en)} a las ${c.horario}`);
+      if (!ok) return;
+      controles = controles.filter(x => x.id !== c.id);
+      aviso('Control eliminado.');
+      if (editando && editando.id === c.id) editar(null);
+      else { pintar(); metricas.refrescar(); }
+    });
+
+    /** Carga un control en el formulario para corregirlo (null = vuelve a "Nuevo control") */
+    function editar(c) {
+      editando = c;
       form.reset();
-      form.horario.value = horaActual();
+      if (c) {
+        ['linea', 'horario', 'cantidad_sin_responder', 'comentario'].forEach(n => { form[n].value = c[n] || ''; });
+        ['muestra_mensaje', 'muestra_respuesta'].forEach(n => { form[n].value = aFechaHoraLocal(c[n]); });
+      } else form.horario.value = horaActual();
       actualizarCampos();
+      if (c) form.fecha_mensajes.value = aFechaHoraLocal(c.fecha_mensajes);
+      vista.querySelector('#wa-titulo-form').textContent = c ? `Editar control de ${c.linea} del ${fmtFecha(c.registrado_en)}` : 'Nuevo control';
+      form.querySelector('[type=submit]').textContent = c ? 'Guardar cambios' : 'Guardar control';
+      vista.querySelector('#wa-cancelar').hidden = !c;
+      if (c) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
       pintar();
       metricas.refrescar();
-    });
-    v.querySelector('#filtros-whatsapp').addEventListener('input', pintar);
+    }
     metricas = MetricasVista.montar(v.querySelector('#wa-metricas'), {
       titulo: 'Línea',
       grupos: () => Estado.config.listas.lineas_whatsapp,
@@ -94,7 +127,7 @@ Modulos.WhatsApp = (() => {
     });
     vista.querySelector('#tabla-whatsapp').innerHTML = lista.length ? `
       <div class="tabla-envoltura"><table class="tabla">
-        <thead><tr><th>Fecha</th><th>Horario</th><th>Línea</th><th>Sin responder</th><th>Muestra</th><th>Comentarios</th><th>Registrado</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Horario</th><th>Línea</th><th>Sin responder</th><th>Muestra</th><th>Comentarios</th><th>Registrado</th><th></th></tr></thead>
         <tbody>${lista.map(c => `<tr>
           <td class="mono">${fmtFecha(c.registrado_en)}</td>
           <td class="mono">${esc(c.horario)}</td>
@@ -103,6 +136,7 @@ Modulos.WhatsApp = (() => {
           <td class="mono nota">${c.muestra_mensaje ? `${fmtFechaHora(c.muestra_mensaje)} → ${fmtFechaHora(c.muestra_respuesta)}` : '—'}</td>
           <td class="texto-libre">${esc(c.comentario)}</td>
           <td class="mono nota">${fmtFechaHora(c.registrado_en)}</td>
+          <td>${botonesRegistro(c.id)}</td>
         </tr>`).join('')}</tbody>
       </table></div>` : vacioHtml('No hay controles con estos filtros.');
   }

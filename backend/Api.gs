@@ -34,6 +34,7 @@ const ACCIONES = {
   // Sección 3 y reporte RRHH
   listarAsistencia: () => listarAsistencia(),
   registrarAsistencia: d => registrarAsistencia(d),
+  editarAsistencia: d => editarAsistencia(d),
   reporteRRHH: d => reporteRRHH(d.fecha),
   exportarRRHHExcel: d => exportarRRHHExcel(d.fecha),
 
@@ -48,13 +49,16 @@ const ACCIONES = {
   // Sección 5
   listarMonitoreos: () => listarMonitoreos(),
   registrarMonitoreo: d => registrarMonitoreo(d),
+  editarMonitoreo: d => editarMonitoreo(d),
 
   // Sección 6
   listarAgendasWeb: () => listarAgendasWeb(),
   registrarAgendaWeb: d => registrarAgendaWeb(d),
+  editarAgendaWeb: d => editarAgendaWeb(d),
   marcarLlamadoAgenda: d => marcarLlamadoAgenda(d.id, d.llamado === true),
   listarBitacora: () => listarBitacora(),
   registrarBitacora: d => registrarBitacora(d),
+  editarBitacora: d => editarBitacora(d),
   listarCapturas: d => listarCapturas(d.seccion),
   subirCaptura: d => subirCaptura(d),
   obtenerImagenCaptura: d => obtenerImagenCaptura(d.archivo_id),
@@ -62,6 +66,10 @@ const ACCIONES = {
   // Sección 7
   listarControlesWhatsApp: () => listarControlesWhatsApp(),
   registrarControlWhatsApp: d => registrarControlWhatsApp(d),
+  editarControlWhatsApp: d => editarControlWhatsApp(d),
+
+  // Eliminar un registro de Asistencia, Redes, Taller o WhatsApp (queda marcado en la base, no se borra)
+  eliminarRegistro: d => eliminarRegistro(d),
 
   // Credenciales (llegan cifradas desde el navegador)
   listarCredenciales: () => listarCredenciales(),

@@ -26,6 +26,7 @@
 .captura .pie { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; font-size: 12px; }
 .entrada-bitacora { padding: 12px 0; border-top: 1px solid var(--pista); display: flex; flex-direction: column; gap: 4px; }
 .entrada-bitacora:first-child { border-top: 0; }
+.agenda .botones-registro, .entrada-bitacora .botones-registro { justify-content: flex-start; margin-top: 6px; }
 
 @media (max-width: 560px) {
   .agenda { grid-template-columns: 54px minmax(0, 1fr); }

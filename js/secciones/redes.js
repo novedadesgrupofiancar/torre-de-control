@@ -1,17 +1,20 @@
 /* ===== Sección 5 – Redes ===== */
 Modulos.Redes = (() => {
   const M = MetricasRespuesta;
-  let vista, monitoreos = [];
+  let vista, seccion, monitoreos = [];
+  let editando = null; // monitoreo que se está corrigiendo (null = carga nueva)
 
   async function render(v, s) {
     vista = v;
+    seccion = s;
+    editando = null;
     monitoreos = await api('listarMonitoreos');
     const listas = Estado.config.listas;
     const redesHistorial = [...new Set(listas.redes.concat(...monitoreos.map(m => Object.keys(m.redes))))];
 
     v.innerHTML = banners([{ tipo: 'rojo', html: 'REVISAR LOS MENSAJES OCULTOS DE LAS REDES' }]) + encabezado(s) + `
       <section class="tarjeta">
-        <h2>Nueva carga de monitoreo</h2>
+        <h2 id="redes-titulo-form">Nueva carga de monitoreo</h2>
         <form id="f-redes" class="form" autocomplete="off">
           <div class="grid-campos">
             ${campo('Turno de monitoreo', `<select name="turno" required>${opcionesHtml(listas.turnos, listas.turnos[0])}</select>`)}
@@ -33,6 +36,7 @@ Modulos.Redes = (() => {
               <p class="nota mono" id="redes-progreso"></p>
               <div id="redes-barra"></div>
             </div>
+            <button class="btn btn-sec" type="button" id="redes-cancelar" hidden>Cancelar</button>
             <button class="btn btn-primario" type="submit">Guardar monitoreo</button>
           </div>
         </form>
@@ -49,14 +53,10 @@ Modulos.Redes = (() => {
     const form = v.querySelector('#f-redes');
     form.addEventListener('input', e => {
       if (e.target.name !== 'cantidad') return;
-      // El más viejo solo se pide si hay mensajes sin responder
-      const fila = e.target.closest('tr');
-      const masViejo = fila.querySelector('[name=mas_viejo]');
-      masViejo.disabled = !(Number(e.target.value) > 0);
-      masViejo.required = !masViejo.disabled;
-      if (masViejo.disabled) masViejo.value = '';
+      habilitarMasViejo(e.target.closest('tr'));
       pintarProgreso();
     });
+    v.querySelector('#redes-cancelar').addEventListener('click', () => render(vista, seccion));
     form.addEventListener('submit', async e => {
       e.preventDefault();
       const filas = [...form.querySelectorAll('tbody tr')].map(tr => {
@@ -67,14 +67,24 @@ Modulos.Redes = (() => {
       const malas = filas.filter(f => f.muestra_mensaje && f.muestra_respuesta && f.muestra_respuesta < f.muestra_mensaje);
       if (malas.length) { aviso(`En ${malas[0].red} la respuesta no puede ser anterior al mensaje del cliente.`, 'error'); return; }
       const ok = await conBoton(form.querySelector('[type=submit]'), async () => {
-        await api('registrarMonitoreo', { turno: form.turno.value, filas });
-        monitoreos = await api('listarMonitoreos');
+        if (editando) await api('editarMonitoreo', { monitoreo_id: editando.id, turno: form.turno.value, filas });
+        else await api('registrarMonitoreo', { turno: form.turno.value, filas });
       });
       if (!ok) return;
-      aviso('Monitoreo guardado.');
+      aviso(editando ? 'Monitoreo corregido.' : 'Monitoreo guardado.');
       render(vista, s);
     });
     v.querySelector('#filtro-red').addEventListener('change', pintarHistorial);
+    v.querySelector('#historial-redes').addEventListener('click', async e => {
+      const b = e.target.closest('[data-editar], [data-eliminar]');
+      if (!b) return;
+      const m = monitoreos.find(x => x.id === (b.dataset.editar || b.dataset.eliminar));
+      if (b.dataset.editar) { editar(m); return; }
+      if (await eliminarRegistro('redes', m.id, b, `el monitoreo ${m.turno} del ${fmtFechaHora(m.registrado_en)} (todas las redes)`)) {
+        aviso('Monitoreo eliminado.');
+        render(vista, s);
+      }
+    });
     MetricasVista.montar(v.querySelector('#redes-metricas'), {
       titulo: 'Página',
       grupos: () => Estado.config.listas.redes,
@@ -82,6 +92,35 @@ Modulos.Redes = (() => {
     });
     pintarProgreso();
     pintarHistorial();
+  }
+
+  /** El más viejo solo se pide si hay mensajes sin responder */
+  function habilitarMasViejo(tr) {
+    const masViejo = tr.querySelector('[name=mas_viejo]');
+    masViejo.disabled = !(Number(tr.querySelector('[name=cantidad]').value) > 0);
+    masViejo.required = !masViejo.disabled;
+    if (masViejo.disabled) masViejo.value = '';
+  }
+
+  /** Carga un monitoreo del historial en el formulario para corregirlo */
+  function editar(m) {
+    editando = m;
+    const form = vista.querySelector('#f-redes');
+    form.turno.value = m.turno;
+    form.querySelectorAll('tbody tr').forEach(tr => {
+      const r = m.redes[tr.dataset.red] || {};
+      const poner = (n, valor) => { tr.querySelector(`[name=${n}]`).value = valor || ''; };
+      poner('cantidad', r.cantidad_sin_responder);
+      habilitarMasViejo(tr);
+      poner('mas_viejo', aFechaHoraLocal(r.fecha_mensajes));
+      poner('muestra_mensaje', aFechaHoraLocal(r.muestra_mensaje));
+      poner('muestra_respuesta', aFechaHoraLocal(r.muestra_respuesta));
+    });
+    vista.querySelector('#redes-titulo-form').textContent = `Editar monitoreo ${m.turno} del ${fmtFechaHora(m.registrado_en)}`;
+    form.querySelector('[type=submit]').textContent = 'Guardar cambios';
+    vista.querySelector('#redes-cancelar').hidden = false;
+    pintarProgreso();
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function pintarProgreso() {
@@ -112,11 +151,12 @@ Modulos.Redes = (() => {
     if (!lista.length) { cont.innerHTML = vacioHtml('Todavía no hay monitoreos cargados.'); return; }
     const columnas = red ? [red] : [...new Set(Estado.config.listas.redes.concat(...lista.map(m => Object.keys(m.redes))))];
     cont.innerHTML = `<div class="tabla-envoltura"><table class="tabla">
-      <thead><tr><th>Fecha</th><th>Turno</th>${columnas.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>
+      <thead><tr><th>Fecha</th><th>Turno</th>${columnas.map(c => `<th>${esc(c)}</th>`).join('')}<th></th></tr></thead>
       <tbody>${lista.map(m => `<tr>
         <td class="mono">${fmtFechaHora(m.registrado_en)}</td>
         <td>${esc(m.turno)}</td>
         ${columnas.map(c => `<td>${celda(m.redes[c])}</td>`).join('')}
+        <td>${botonesRegistro(m.id)}</td>
       </tr>`).join('')}</tbody>
     </table></div>`;
   }

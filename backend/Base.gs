@@ -1,6 +1,8 @@
 /**
  * Base de datos del panel: planilla "Torre de control – Base" en Drive, una hoja por entidad.
  * Todas las filas se agregan al final con fecha y hora; nada se sobrescribe.
+ * Editar o eliminar no borra filas: la versión anterior queda marcada en "estado_registro"
+ * (Reemplazado / Eliminado) y la corregida se agrega al final con "reemplaza_a".
  */
 
 const ZONA = 'America/Montevideo';
@@ -8,19 +10,22 @@ const NOMBRE_PLANILLA = 'Torre de control – Base';
 const NOMBRE_CARPETA_CAPTURAS = 'Torre de control – Capturas';
 const HOJA_CONFIG = 'configuración';
 // Subir este número si se agregan hojas nuevas, para que se creen en la próxima llamada
-const VERSION_BASE = '7';
+const VERSION_BASE = '8';
+
+// Columnas para editar y eliminar registros guardando el historial (se agregan al final de cada hoja)
+const COLUMNAS_HISTORIAL = ['reemplaza_a', 'estado_registro', 'modificado_en'];
 
 // Encabezados de cada hoja (el orden es el de las columnas)
 const HOJAS = {
-  'asistencia': ['id', 'registrado_en', 'agente', 'evento', 'motivo', 'tipo_ho', 'hora_llegada', 'desde', 'hasta', 'comentario'],
+  'asistencia': ['id', 'registrado_en', 'agente', 'evento', 'motivo', 'tipo_ho', 'hora_llegada', 'desde', 'hasta', 'comentario'].concat(COLUMNAS_HISTORIAL),
   'issues': ['id', 'registrado_en', 'fecha', 'issue', 'detalles'],
   'comentarios_issues': ['id', 'issue_id', 'registrado_en', 'comentario', 'estado', 'escalado_a'],
   // Columnas agregadas en la etapa 4 (al final, para no mover las existentes): cantidad_sin_responder, muestra_mensaje, muestra_respuesta
-  'redes': ['id', 'registrado_en', 'monitoreo_id', 'turno', 'red', 'sin_responder', 'fecha_mensajes', 'cantidad_sin_responder', 'muestra_mensaje', 'muestra_respuesta'],
-  'agendas_web': ['id', 'registrado_en', 'fecha', 'hora', 'taller', 'comentario', 'se_llamo', 'historial_llamado'],
-  'bitacora_taller': ['id', 'registrado_en', 'comentario'],
+  'redes': ['id', 'registrado_en', 'monitoreo_id', 'turno', 'red', 'sin_responder', 'fecha_mensajes', 'cantidad_sin_responder', 'muestra_mensaje', 'muestra_respuesta'].concat(COLUMNAS_HISTORIAL),
+  'agendas_web': ['id', 'registrado_en', 'fecha', 'hora', 'taller', 'comentario', 'se_llamo', 'historial_llamado'].concat(COLUMNAS_HISTORIAL),
+  'bitacora_taller': ['id', 'registrado_en', 'comentario'].concat(COLUMNAS_HISTORIAL),
   'capturas': ['id', 'registrado_en', 'seccion', 'nombre', 'link', 'archivo_id'],
-  'whatsapp': ['id', 'registrado_en', 'linea', 'horario', 'comentario', 'cantidad_sin_responder', 'fecha_mensajes', 'muestra_mensaje', 'muestra_respuesta'],
+  'whatsapp': ['id', 'registrado_en', 'linea', 'horario', 'comentario', 'cantidad_sin_responder', 'fecha_mensajes', 'muestra_mensaje', 'muestra_respuesta'].concat(COLUMNAS_HISTORIAL),
   'check_diario': ['id', 'registrado_en', 'fecha'],
   'fotos_campañas': ['id', 'registrado_en', 'foto_id', 'fecha_foto', 'mes', 'origen', 'hoja', 'km', 'agente', 'clave', 'oportunidad'],
   'llamadas': ['id', 'registrado_en', 'carga_id', 'desde', 'hasta', 'semana', 'agente', 'interno', 'pct_atendidas', 'atendidas', 'ofrecidas', 'detalle_colas', 'desconexiones', 'minutos_desconectado', 'sesiones_sin_cerrar', 'resumen'],
@@ -106,8 +111,11 @@ function asegurarColumnas_(hoja, encabezados) {
   hoja.getRange(1, desde, 1, faltan.length).setValues([faltan]).setFontWeight('bold');
 }
 
-/** Lee todas las filas de una hoja como objetos {columna: texto} */
-function leerFilas_(nombre) {
+/**
+ * Lee las filas de una hoja como objetos {columna: texto}.
+ * Salvo que se pida el historial, no devuelve las filas reemplazadas ni eliminadas.
+ */
+function leerFilas_(nombre, conHistorial) {
   const hoja = obtenerHoja_(nombre);
   const ultima = hoja.getLastRow();
   if (ultima < 2) return [];
@@ -117,7 +125,7 @@ function leerFilas_(nombre) {
     const obj = {};
     encabezados.forEach((col, i) => { obj[col] = aTexto_(fila[i]); });
     return obj;
-  });
+  }).filter(obj => conHistorial || !obj.estado_registro);
 }
 
 /** Agrega filas al final de la hoja (nunca reemplaza filas existentes) */
@@ -126,14 +134,56 @@ function agregarFilas_(nombre, objetos) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
-    const hoja = obtenerHoja_(nombre);
-    const encabezados = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0].map(String);
-    const filas = objetos.map(obj => encabezados.map(col => celda_(obj[col])));
-    const desde = hoja.getLastRow() + 1;
-    const faltan = desde + filas.length - 1 - hoja.getMaxRows();
-    if (faltan > 0) hoja.insertRowsAfter(hoja.getMaxRows(), faltan);
-    hoja.getRange(desde, 1, filas.length, encabezados.length).setNumberFormat('@').setValues(filas);
+    escribirAlFinal_(obtenerHoja_(nombre), objetos);
     return objetos;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Escribe filas al final de la hoja (quien llama ya tiene el bloqueo) */
+function escribirAlFinal_(hoja, objetos) {
+  if (!objetos.length) return;
+  const encabezados = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0].map(String);
+  const filas = objetos.map(obj => encabezados.map(col => celda_(obj[col])));
+  const desde = hoja.getLastRow() + 1;
+  const faltan = desde + filas.length - 1 - hoja.getMaxRows();
+  if (faltan > 0) hoja.insertRowsAfter(hoja.getMaxRows(), faltan);
+  hoja.getRange(desde, 1, filas.length, encabezados.length).setNumberFormat('@').setValues(filas);
+}
+
+/**
+ * Edita o elimina registros sin borrar nada: las filas vigentes donde columna = valor quedan
+ * marcadas como "Reemplazado" o "Eliminado" con la fecha, y las filas que devuelve
+ * armarNuevas(anteriores) se agregan al final (cada una con reemplaza_a = id de la anterior).
+ */
+function reemplazarRegistros_(nombre, columna, valor, estado, armarNuevas) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const hoja = obtenerHoja_(nombre);
+    const datos = hoja.getDataRange().getValues();
+    const encabezados = datos[0].map(String);
+    const colEstado = encabezados.indexOf('estado_registro');
+    const colFecha = encabezados.indexOf('modificado_en');
+    if (colEstado < 0 || colFecha < 0) throw new Error('La hoja ' + nombre + ' no admite cambios.');
+    const anteriores = [];
+    for (let i = 1; i < datos.length; i++) {
+      const fila = {};
+      encabezados.forEach((col, j) => { fila[col] = aTexto_(datos[i][j]); });
+      if (valor && fila[columna] === valor && !fila.estado_registro) anteriores.push({ numero: i + 1, fila: fila });
+    }
+    if (!anteriores.length) throw new Error('Ese registro ya fue editado o eliminado. Actualizá la pantalla.');
+    // Se arman antes de marcar nada: si una validación falla, la hoja queda como estaba
+    const nuevas = armarNuevas ? armarNuevas(anteriores.map(a => a.fila)) : [];
+    const ahora = ahora_();
+    nuevas.forEach(n => { n.modificado_en = ahora; });
+    anteriores.forEach(a => {
+      hoja.getRange(a.numero, colEstado + 1).setNumberFormat('@').setValue(estado);
+      hoja.getRange(a.numero, colFecha + 1).setNumberFormat('@').setValue(ahora);
+    });
+    escribirAlFinal_(hoja, nuevas);
+    return nuevas;
   } finally {
     lock.releaseLock();
   }
@@ -155,6 +205,7 @@ function actualizarFila_(nombre, id, calcularCambios) {
       if (String(datos[i][colId]) !== id) continue;
       const fila = {};
       encabezados.forEach((col, j) => { fila[col] = aTexto_(datos[i][j]); });
+      if (fila.estado_registro) throw new Error('Ese registro ya fue editado o eliminado. Actualizá la pantalla.');
       const cambios = calcularCambios(fila);
       Object.keys(cambios).forEach(col => {
         const j = encabezados.indexOf(col);
@@ -166,6 +217,23 @@ function actualizarFila_(nombre, id, calcularCambios) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// Registros que se pueden eliminar desde el panel: tipo → [hoja, columna que lo identifica]
+const REGISTROS_ELIMINABLES = {
+  asistencia: ['asistencia', 'id'],
+  redes: ['redes', 'monitoreo_id'], // un monitoreo completo (todas sus redes)
+  agenda_web: ['agendas_web', 'id'],
+  bitacora_taller: ['bitacora_taller', 'id'],
+  whatsapp: ['whatsapp', 'id']
+};
+
+/** Elimina un registro del panel; en la planilla queda marcado como "Eliminado" con la fecha */
+function eliminarRegistro(d) {
+  const destino = REGISTROS_ELIMINABLES[d.tipo];
+  if (!destino) throw new Error('Ese tipo de registro no se puede eliminar.');
+  reemplazarRegistros_(destino[0], destino[1], texto_(d.id, 60), 'Eliminado');
+  return true;
 }
 
 /** Exporta una tabla a .xlsx (vía una planilla temporal que después se envía a la papelera) */

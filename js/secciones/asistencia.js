@@ -6,9 +6,11 @@ Modulos.Asistencia = (() => {
   const CONTADOR = [['Llegada tarde', 'Tarde'], ['Se retira antes', 'Se retira'], ['Falta', 'Faltas'],
     ['Recupero de horas', 'Recupero'], ['Licencia', 'Licencia'], ['Home office', 'HO'], ['No marcó', 'No marcó']];
   let vista, registros = [];
+  let editando = null; // registro que se está corrigiendo (null = registro nuevo)
 
   async function render(v, s) {
     vista = v;
+    editando = null;
     registros = await api('listarAsistencia');
     const conf = Estado.config;
     const activos = conf.agentes.filter(a => a.activo).map(a => a.nombre);
@@ -17,7 +19,7 @@ Modulos.Asistencia = (() => {
     v.innerHTML = encabezado(s) + `
       <div class="fila-2">
         <section class="tarjeta">
-          <h2>Nuevo registro</h2>
+          <h2 id="as-titulo-form">Nuevo registro</h2>
           ${activos.length ? '' : vacioHtml('No hay agentes activos. Cargalos en Configuración.')}
           <form id="f-asistencia" class="form" autocomplete="off">
             <div class="grid-campos">
@@ -30,7 +32,10 @@ Modulos.Asistencia = (() => {
               ${campo('Hasta', `<input type="date" name="hasta" value="${hoyISO()}">`)}
             </div>
             ${campo('Comentario', '<textarea name="comentario" rows="3"></textarea>')}
-            <div class="acciones"><button class="btn btn-primario" type="submit">Guardar registro</button></div>
+            <div class="acciones">
+              <button class="btn btn-sec" type="button" id="as-cancelar" hidden>Cancelar</button>
+              <button class="btn btn-primario" type="submit">Guardar registro</button>
+            </div>
           </form>
         </section>
         <section class="tarjeta">
@@ -64,17 +69,49 @@ Modulos.Asistencia = (() => {
       e.preventDefault();
       const datos = leerForm(form);
       const ok = await conBoton(form.querySelector('[type=submit]'), async () => {
-        await api('registrarAsistencia', datos);
+        if (editando) await api('editarAsistencia', Object.assign(datos, { id: editando.id }));
+        else await api('registrarAsistencia', datos);
         registros = await api('listarAsistencia');
       });
       if (!ok) return;
-      aviso('Registro guardado.');
-      form.reset();
-      form.desde.value = form.hasta.value = hoyISO();
-      mostrarCamposSegunEvento(form);
-      pintar();
+      aviso(editando ? 'Registro corregido.' : 'Registro guardado.');
+      editar(null);
     });
+    v.querySelector('#as-cancelar').addEventListener('click', () => editar(null));
     v.querySelector('#filtros-asistencia').addEventListener('input', pintar);
+    v.querySelector('#tabla-asistencia').addEventListener('click', async e => {
+      const b = e.target.closest('[data-editar], [data-eliminar]');
+      if (!b) return;
+      const r = registros.find(x => x.id === (b.dataset.editar || b.dataset.eliminar));
+      if (b.dataset.editar) { editar(r); return; }
+      const ok = await eliminarRegistro('asistencia', r.id, b, `el registro de ${r.agente} (${r.evento}, ${fmtRango(r.desde, r.hasta)})`);
+      if (!ok) return;
+      registros = registros.filter(x => x.id !== r.id);
+      aviso('Registro eliminado.');
+      if (editando && editando.id === r.id) editar(null);
+      else pintar();
+    });
+
+    /** Carga un registro en el formulario para corregirlo (null = vuelve a "Nuevo registro") */
+    function editar(r) {
+      editando = r;
+      form.reset();
+      form.querySelectorAll('option[data-inactivo]').forEach(o => o.remove());
+      if (r) {
+        // Un agente que ya no está activo no figura en la lista: se agrega solo para esta edición
+        if (![...form.agente.options].some(o => o.value === r.agente)) {
+          form.agente.insertAdjacentHTML('beforeend', `<option value="${esc(r.agente)}" data-inactivo>${esc(r.agente)}</option>`);
+        }
+        ['agente', 'evento', 'motivo', 'tipo_ho', 'hora_llegada', 'desde', 'comentario'].forEach(n => { form[n].value = r[n] || ''; });
+        form.hasta.value = r.hasta || r.desde;
+      } else form.desde.value = form.hasta.value = hoyISO();
+      mostrarCamposSegunEvento(form);
+      vista.querySelector('#as-titulo-form').textContent = r ? `Editar registro de ${r.agente}` : 'Nuevo registro';
+      form.querySelector('[type=submit]').textContent = r ? 'Guardar cambios' : 'Guardar registro';
+      vista.querySelector('#as-cancelar').hidden = !r;
+      if (r) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      pintar();
+    }
     v.querySelector('#ir-rrhh').addEventListener('click', () => irA('reportes'));
     pintar();
   }
@@ -103,7 +140,7 @@ Modulos.Asistencia = (() => {
     const filas = filtrar(f, false);
     vista.querySelector('#tabla-asistencia').innerHTML = filas.length ? `
       <div class="tabla-envoltura"><table class="tabla">
-        <thead><tr><th>Fecha</th><th>Agente</th><th>Evento</th><th>Motivo</th><th>Detalle</th><th>Comentario</th><th>Registrado</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Agente</th><th>Evento</th><th>Motivo</th><th>Detalle</th><th>Comentario</th><th>Registrado</th><th></th></tr></thead>
         <tbody>${filas.map(r => `<tr>
           <td class="mono">${fmtRango(r.desde, r.hasta)}</td>
           <td>${esc(r.agente)}</td>
@@ -112,6 +149,7 @@ Modulos.Asistencia = (() => {
           <td>${r.tipo_ho ? 'HO: ' + esc(r.tipo_ho) : r.hora_llegada ? 'Llegó <span class="mono">' + esc(r.hora_llegada) + '</span>' : ''}</td>
           <td class="texto-libre">${esc(r.comentario)}</td>
           <td class="mono nota">${fmtFechaHora(r.registrado_en)}</td>
+          <td>${botonesRegistro(r.id)}</td>
         </tr>`).join('')}</tbody>
       </table></div>` : vacioHtml('No hay registros con estos filtros.');
 

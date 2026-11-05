@@ -51,6 +51,24 @@ function registrarMonitoreo(d) {
   return true;
 }
 
+/**
+ * Corrige un monitoreo completo: conserva su monitoreo_id y su fecha de registro (es el momento
+ * del monitoreo para las métricas) y marca las filas anteriores como reemplazadas.
+ */
+function editarMonitoreo(d) {
+  const conf = obtenerConfiguracion();
+  const turno = enLista_(d.turno, conf.listas.turnos, 'turno de monitoreo');
+  const respuestas = d.filas || [];
+  reemplazarRegistros_('redes', 'monitoreo_id', texto_(d.monitoreo_id, 60), 'Reemplazado', anteriores =>
+    anteriores.map(a => {
+      const r = respuestas.filter(x => x.red === a.red)[0];
+      if (!r) throw new Error('Faltan los datos de ' + a.red + '.');
+      return Object.assign({ id: nuevoId_(), registrado_en: a.registrado_en, monitoreo_id: a.monitoreo_id, turno: turno,
+        red: a.red, reemplaza_a: a.id }, camposRespuesta_(r, a.red));
+    }));
+  return true;
+}
+
 /** Monitoreos agrupados, del más reciente al más viejo */
 function listarMonitoreos() {
   const grupos = {};
