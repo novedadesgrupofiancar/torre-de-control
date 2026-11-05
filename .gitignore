@@ -21,8 +21,9 @@ Clave.txt
 *.mp4
 *.webm
 
-# Especificación interna: tiene nombres de agentes y datos del equipo
+# Especificación interna y memoria del proyecto: tienen nombres de agentes y datos del equipo
 Arquitectura.md
+MEMORY.md
 
 # Sistema
 desktop.ini

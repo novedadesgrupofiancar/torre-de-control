@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Leer siempre `MEMORY.md` al empezar** (decisiones, contexto y pendientes; solo local, en `.gitignore`) y actualizarlo cuando se tome una decisión nueva: @MEMORY.md
+
 "Torre de control": panel del contact center. Todo (código, UI, commits, mensajes al usuario) va en español rioplatense.
 `LEEME.md` tiene la estructura y las reglas de negocio; `Arquitectura.md` (solo local, en `.gitignore`) es la especificación funcional: leerla antes de agregar algo.
 
