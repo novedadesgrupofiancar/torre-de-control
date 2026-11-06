@@ -3,6 +3,8 @@
    lectura del CSV de salientes de 3CX y cruce con las gestiones. */
 const CampaniasLogica = (() => {
   const ESTADOS = ['Agendado', 'Ya lo hizo', 'Rechaza', 'Pendiente', 'No contesta', 'No aplica'];
+  // Oportunidad que cuenta como ganada (en la planilla de Marcas se escribe "Ganada")
+  const GANADAS = ['Agendado', 'Ganada'];
   const SIN_MAPEAR = 'Sin mapear';
   // Motivos de No aplica en orden de evaluación: gana el primero que coincide
   const MOTIVOS = [
@@ -86,7 +88,7 @@ const CampaniasLogica = (() => {
       const o = f.oportunidad;
       if (!o) { r.sinGestionar++; return; }
       r.gestionadas++;
-      if (o === 'Agendado') r.ganadas++;
+      if (GANADAS.some(g => normalizar(g) === normalizar(o))) r.ganadas++;
       else if (o === 'No aplica') {
         const motivo = clasificarNoAplica(f.comentario, palabras);
         r.motivos[motivo]++;

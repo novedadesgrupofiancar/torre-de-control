@@ -158,7 +158,7 @@ Modulos.Campanias = (() => {
 
   function filasResultados(r) {
     return [
-      ['Ganadas (Agendado)', r.ganadas, 'verde'],
+      ['Ganadas (Agendado o Ganada)', r.ganadas, 'verde'],
       ...L.MOTIVOS.map(m => [m.nombre, r.motivos[m.nombre], '']),
       [L.SIN_CLASIFICAR, r.motivos[L.SIN_CLASIFICAR], r.motivos[L.SIN_CLASIFICAR] ? 'ambar' : ''],
       ...Object.keys(r.estados).map(e => [e, r.estados[e], '']),
