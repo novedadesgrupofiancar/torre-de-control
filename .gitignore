@@ -25,6 +25,9 @@ Clave.txt
 Arquitectura.md
 MEMORY.md
 
+# Bocetos de diseño para revisar antes de aprobar (solo locales)
+bocetos/
+
 # Sistema
 desktop.ini
 Thumbs.db
