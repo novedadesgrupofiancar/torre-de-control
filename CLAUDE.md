@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **No agregar funcionalidades, campos ni pasos** que no estén en `Arquitectura.md` o pedidos explícitamente. Ante dudas, preguntar.
 - **Todo cambio termina publicado:** commit en español + push, y si cambió `backend/`, `clasp push` + actualizar la **misma** implementación. Nunca crear una implementación nueva (cambia la URL de la API).
 - **Ningún dato cargado se puede perder.** No renombrar hojas ni columnas; las columnas nuevas van al final. Antes de una migración, sacar una foto de los datos por la API y compararla después.
-- Mantener el diseño visual (desde el 2026-11-20: estilo Linear, grafito neutro, acento índigo solo para acción y sección activa, esquinas rectas, sin tarjetas, fuente Geist; tokens en `css/base.css`). No usar colores fijos en el JS: usar las variables (ej. `var(--verde)`).
+- Mantener el diseño visual (desde el 2026-11-20: grafito neutro, cada bloque en un panel plano con borde (`.tarjeta`), esquinas rectas, acento azul profundo solo para acción y sección activa (el verde es solo para estados), fuente Geist de 14 px; tokens en `css/base.css`). Los bloques tienen que verse bien delimitados: nada de diseños planos sin separación. Antes de un cambio visual grande, dejar un boceto en `bocetos/` (no se sube) para que el usuario lo apruebe. No usar colores fijos en el JS: usar las variables (ej. `var(--verde)`).
 - El usuario no ejecuta comandos: git, gh y clasp los corre Claude (ya autenticados en la cuenta del panel).
 - Al dar instrucciones al usuario, nombrar exactamente la sección, el bloque, el botón, el archivo o la función.
 

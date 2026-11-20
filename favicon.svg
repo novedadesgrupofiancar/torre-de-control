@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Ícono de la pestaña: la marca de órbita del menú (anillo fino y punto índigo) -->
+  <!-- Ícono de la pestaña: la marca de órbita del menú (anillo fino y punto azul) -->
   <rect width="64" height="64" fill="#111113"/>
   <circle cx="30" cy="34" r="17" fill="none" stroke="#E7E7EA" stroke-width="4"/>
-  <circle cx="47" cy="17" r="8" fill="#5B58D6" stroke="#111113" stroke-width="4"/>
+  <circle cx="47" cy="17" r="8" fill="#2F64D6" stroke="#111113" stroke-width="4"/>
 </svg>

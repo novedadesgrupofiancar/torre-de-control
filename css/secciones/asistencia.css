@@ -1,5 +1,5 @@
 /* Sección 3 – contador por agente */
-.contador-fila { display: grid; grid-template-columns: minmax(90px, 1fr) repeat(7, 60px); gap: 4px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--pista); }
+.contador-fila { display: grid; grid-template-columns: minmax(80px, 1fr) repeat(7, 56px); gap: 4px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--pista); }
 .contador-fila.cab { padding-top: 0; }
 .contador-fila.cab span { font-size: 11.5px; color: var(--apagado); text-align: center; }
 .contador-num { text-align: center; font-size: 14px; font-weight: 500; }
