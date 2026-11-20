@@ -99,7 +99,7 @@ Modulos.Recordatorios = (() => {
     const enOrden = historial.slice().reverse();
     return `
       <div class="resumen-check">
-        ${anillo(pct, Math.round(pct) + '%', 'cumplido', '#7DBF9E')}
+        ${anillo(pct, Math.round(pct) + '%', 'cumplido', 'var(--verde)')}
         <div class="dato"><strong>${check.racha}</strong><span>${check.racha === 1 ? 'día hábil seguido' : 'días hábiles seguidos'}</span></div>
         <div class="dato"><strong>${marcados}/${cerrados.length}</strong><span>últimos ${historial.length} días hábiles</span></div>
       </div>

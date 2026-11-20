@@ -132,7 +132,7 @@ function pintarMenu() {
     ${s.id === 'reportes' ? '<div class="menu-sep"></div>' : ''}
     <button type="button" class="menu-item${s.id === Estado.seccion ? ' activo' : ''}" data-id="${s.id}"
       ${s.id === Estado.seccion ? 'aria-current="page"' : ''}>
-      <span class="chip-num">${s.chip}</span><span>${esc(s.nombre)}</span>
+      ${s.extra ? '' : `<span class="chip-num">${s.chip}</span>`}<span>${esc(s.nombre)}</span>
     </button>`).join('') + enlacesMenu();
 }
 
@@ -142,7 +142,7 @@ function enlacesMenu() {
   if (!miro || !/^https:\/\//.test(miro)) return '';
   return `<div class="menu-sep"></div>
     <a class="menu-item" href="${esc(miro)}" target="_blank" rel="noopener">
-      <span class="chip-num">M</span><span>Miro</span>
+      <span>Miro</span><span class="chip-num" aria-hidden="true">↗</span>
     </a>`;
 }
 
@@ -180,8 +180,7 @@ async function irA(id) {
 /* ---------- Piezas de interfaz ---------- */
 
 function encabezado(s) {
-  const etiqueta = s.extra ? 'Panel' : 'Sección ' + s.chip;
-  return `<header class="encabezado"><p class="eyebrow">${etiqueta}</p><h1>${esc(s.titulo || s.nombre)}</h1></header>`;
+  return `<header class="encabezado"><h1>${esc(s.titulo || s.nombre)}</h1></header>`;
 }
 
 function banners(lista) {
@@ -204,15 +203,15 @@ function barra(pct, clase) {
   return `<div class="barra ${clase || ''}" role="progressbar" aria-valuenow="${Math.round(p)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${p}%"></span></div>`;
 }
 
-/** Anillo de progreso circular */
+/** Anillo de progreso circular (color: una variable de css/base.css, ej. 'var(--verde)') */
 function anillo(pct, valor, texto, color) {
-  const tam = 104, grosor = 8, r = (tam - grosor) / 2, circ = 2 * Math.PI * r;
+  const tam = 96, grosor = 4, r = (tam - grosor) / 2, circ = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(100, pct || 0));
   return `<div class="anillo" style="width:${tam}px;height:${tam}px">
     <svg width="${tam}" height="${tam}" aria-hidden="true">
-      <circle cx="${tam / 2}" cy="${tam / 2}" r="${r}" fill="none" stroke="#243041" stroke-width="${grosor}"/>
-      <circle cx="${tam / 2}" cy="${tam / 2}" r="${r}" fill="none" stroke="${color || '#6AA7E8'}" stroke-width="${grosor}"
-        stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ * (1 - p / 100)}"/>
+      <circle cx="${tam / 2}" cy="${tam / 2}" r="${r}" fill="none" style="stroke:var(--pista)" stroke-width="${grosor}"/>
+      <circle cx="${tam / 2}" cy="${tam / 2}" r="${r}" fill="none" style="stroke:${color || 'var(--azul)'}" stroke-width="${grosor}"
+        stroke-dasharray="${circ}" stroke-dashoffset="${circ * (1 - p / 100)}"/>
     </svg>
     <div class="anillo-texto"><strong>${esc(valor)}</strong><span>${esc(texto)}</span></div>
   </div>`;

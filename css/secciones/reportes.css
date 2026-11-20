@@ -1,10 +1,11 @@
-/* Reportes */
+/* Reportes: vista previa del texto que se copia al mail */
 .vista-previa {
-  background: var(--sup2);
-  border-radius: 16px;
-  padding: 18px;
+  background: var(--lateral);
+  border: 1px solid var(--pista);
+  padding: 16px 18px;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 12.5px;
+  line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   max-height: 520px;

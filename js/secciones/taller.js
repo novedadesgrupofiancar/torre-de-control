@@ -188,7 +188,7 @@ Modulos.Taller = (() => {
     const lista = agendas.filter(a => a.fecha === fecha);
     const llamadas = lista.filter(a => a.se_llamo === 'Sí').length;
     vista.querySelector('#anillo-agendas').innerHTML = lista.length
-      ? anillo(llamadas / lista.length * 100, `${llamadas}/${lista.length}`, 'llamados', llamadas === lista.length ? '#7DBF9E' : '#6AA7E8') : '';
+      ? anillo(llamadas / lista.length * 100, `${llamadas}/${lista.length}`, 'llamados', llamadas === lista.length ? 'var(--verde)' : 'var(--azul)') : '';
     vista.querySelector('#lista-agendas').innerHTML = lista.length ? lista.map(a => {
       const ultimoCambio = (a.historial_llamado || '').split('\n').pop();
       return `<div class="agenda">

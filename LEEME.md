@@ -23,7 +23,7 @@ La especificación funcional (`Arquitectura.md`) queda solo en la carpeta local:
 torre-de-control/
 ├── index.html                 página única: pantalla de ingreso + panel
 ├── css/
-│   ├── base.css               estilo "Órbita azul y verde": tokens, layout, componentes
+│   ├── base.css               tokens (grafito, índigo, esquinas rectas), layout, componentes
 │   └── secciones/             estilos propios de cada sección
 ├── js/
 │   ├── config.js              URL de la API (web app de Apps Script)
